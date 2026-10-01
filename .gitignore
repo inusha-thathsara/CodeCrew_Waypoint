@@ -69,3 +69,6 @@ docker-data/
 Thumbs.db
 .vscode/
 .idea/
+*.bkp
+.*.bkp
+
