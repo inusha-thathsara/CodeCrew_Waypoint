@@ -1,0 +1,72 @@
+# ==========================================
+# Data & CSVs (Seed via SQL instead)
+# ==========================================
+data/
+*.csv
+
+# ==========================================
+# Phase 1: Designathon Files & Deliverables
+# ==========================================
+AI_TOOL_DISCLOSURE.md
+Challenge Booklet.pdf
+check_allocation.py
+CodeCrew_Designathon_Complete.pdf
+CodeCrew_Designathon_Page1.pdf
+CodeCrew_Designathon_Page2.pdf
+CodeCrew_Designathon_Page3.pdf
+CodeCrew_Designathon.fig
+CodeCrew_Designathon.zip
+Deligate booklet .pdf
+Figma.pdf
+loader_portal.html
+loader_screen_mockup.jpg
+Tech_Triathlon_Chat_History.md
+
+# Patterns
+*.pdf
+*.fig
+*.zip
+
+# ==========================================
+# Node & Frontend
+# ==========================================
+node_modules/
+.next/
+dist/
+build/
+.cache/
+
+# ==========================================
+# Python & Backend
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.sqlite3
+
+# ==========================================
+# Environment & Secrets
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==========================================
+# Docker & Logs
+# ==========================================
+logs/
+*.log
+docker-data/
+
+# ==========================================
+# OS / IDE
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
