@@ -46,6 +46,90 @@ type DriverScreen =
   | 'sync-status'
   | 'settings';
 
+interface StopItem {
+  product: string;
+  planned: number;
+  available: number;
+  status: string;
+}
+
+interface DriverStopData {
+  num: number;
+  outletId: string;
+  name: string;
+  location: string;
+  window: string;
+  orderId: string;
+  vehicle: string;
+  totalCrates: number;
+  dockType: string;
+  manager: string;
+  shortfallAlert?: { item: string; planned: number; available: number; note: string };
+  items: StopItem[];
+}
+
+const DRIVER_STOPS_MAP: Record<number, DriverStopData> = {
+  1: {
+    num: 1,
+    outletId: 'OUT077',
+    name: 'Kandy Fresh Central',
+    location: 'Peradeniya Road, Kandy',
+    window: '5.00AM:7.30AM',
+    orderId: 'WF-1043',
+    vehicle: 'VEH057 (Van Reefer 1.5T)',
+    totalCrates: 15,
+    dockType: 'Rear Bay Hydraulic Dock',
+    manager: 'Aravinda Silva',
+    shortfallAlert: {
+      item: 'Milk',
+      planned: 18,
+      available: 15,
+      note: '3 units unavailable at depot. Warehouse logged shortage during staging. Credit note pre-applied.',
+    },
+    items: [
+      { product: 'Milk (20L Crate)', planned: 18, available: 15, status: '15 ⚠️' },
+      { product: 'Yogurt (12x500g)', planned: 10, available: 10, status: '10 ✓' },
+      { product: 'Fresh Vegetables', planned: 8, available: 8, status: '8 ✓' },
+      { product: 'Frozen Chicken', planned: 4, available: 4, status: '4 ✓' },
+    ],
+  },
+  2: {
+    num: 2,
+    outletId: 'OUT079',
+    name: 'Kandy Fresh - Katugastota',
+    location: 'Katugastota Highway Junction',
+    window: '4.00AM:7.45AM',
+    orderId: 'WF-1044',
+    vehicle: 'VEH057 (Van Reefer 1.5T)',
+    totalCrates: 15,
+    dockType: 'Side Ramp Delivery',
+    manager: 'Kamal Bandara',
+    items: [
+      { product: 'Full Cream Milk (1L)', planned: 24, available: 24, status: '24 ✓' },
+      { product: 'Butter Salted (200g)', planned: 12, available: 12, status: '12 ✓' },
+      { product: 'Fresh Nuwara Eliya Carrots', planned: 10, available: 10, status: '10 ✓' },
+      { product: 'Highland Curd (Clay Pot)', planned: 6, available: 6, status: '6 ✓' },
+    ],
+  },
+  3: {
+    num: 3,
+    outletId: 'OUT080',
+    name: 'Kadugannawa Express Outlet',
+    location: 'Main Street Front Door',
+    window: '5.30AM:8.00AM',
+    orderId: 'WF-1045',
+    vehicle: 'VEH057 (Van Reefer 1.5T)',
+    totalCrates: 14,
+    dockType: 'Street Curb Delivery (Van Only)',
+    manager: 'Nalinda Perera',
+    items: [
+      { product: 'Curd Pots (Clay)', planned: 15, available: 15, status: '15 ✓' },
+      { product: 'Eggs Farm Fresh (30s)', planned: 8, available: 8, status: '8 ✓' },
+      { product: 'Leafy Salad Greens', planned: 10, available: 10, status: '10 ✓' },
+    ],
+  },
+};
+
 export default function DriverResponsiveApp() {
   const router = useRouter();
   const [screen, setScreen] = useState<DriverScreen>('home');
@@ -55,6 +139,8 @@ export default function DriverResponsiveApp() {
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [activeStopIdx, setActiveStopIdx] = useState(1);
   const [viewportMode, setViewportMode] = useState<'responsive' | 'phone'>('responsive');
+
+  const activeStop = DRIVER_STOPS_MAP[activeStopIdx] || DRIVER_STOPS_MAP[1];
 
   const handleSimulateConnectionLoss = () => {
     setIsOffline(true);
@@ -575,26 +661,74 @@ export default function DriverResponsiveApp() {
           {/* ========================================================= */}
           {screen === 'stop-detail' && (
             <div className="max-w-4xl mx-auto space-y-4">
+              {/* Stop Workflow Stepper Bar */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold text-[11px] border border-blue-200">
+                      Stop {activeStop.num} of 3
+                    </span>
+                    <strong className="text-slate-900 text-sm">{activeStop.name} ({activeStop.outletId})</strong>
+                  </div>
+                  <span className="text-slate-500 font-semibold">
+                    Phase 1 of 3: Manifest Inspection
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('stop-detail')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs cursor-pointer"
+                  >
+                    <span>1. Manifest Review</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('en-route')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer"
+                  >
+                    <span>2. En Route</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('complete-delivery')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer"
+                  >
+                    <span>3. Digital POD</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setScreen('stops-list')} className="p-1.5 rounded-lg hover:bg-slate-100">
+                  <button
+                    onClick={() => {
+                      setActiveTab('stops');
+                      setScreen('stops-list');
+                    }}
+                    className="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 transition-all"
+                    title="Back to Stops List"
+                  >
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
                   </button>
                   <div>
                     <h1 className="text-lg font-black text-slate-900">
-                      OUT077 : Kandy Fresh
+                      {activeStop.outletId} : {activeStop.name}
                     </h1>
-                    <span className="text-xs text-slate-500 font-semibold">Stop 1 of 3</span>
+                    <span className="text-xs text-slate-500 font-semibold">
+                      Stop {activeStop.num} of 3 • {activeStop.location}
+                    </span>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleSimulateConnectionLoss}
-                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 transition-all"
+                  className="px-3.5 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 transition-all shadow-xs"
                 >
                   <span>📶</span>
-                  <span>Simulate Connection Loss</span>
+                  <span>Simulate Drop</span>
                 </button>
               </div>
 
@@ -608,72 +742,92 @@ export default function DriverResponsiveApp() {
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
                       <span className="text-slate-500">Order ID</span>
-                      <strong className="text-slate-900 font-mono">WF-1043</strong>
+                      <strong className="text-slate-900 font-mono">{activeStop.orderId}</strong>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-slate-100">
                       <span className="text-slate-500">Delivery Window</span>
-                      <strong className="text-slate-900">3.00AM:8.00AM</strong>
+                      <strong className="text-slate-900">{activeStop.window}</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Assigned Vehicle</span>
+                      <strong className="text-slate-900">{activeStop.vehicle}</strong>
                     </div>
                     <div className="flex justify-between py-1.5">
-                      <span className="text-slate-500">Assigned Vehicle</span>
-                      <strong className="text-slate-900">VEH057 (Van Reefer)</strong>
+                      <span className="text-slate-500">Dock Type</span>
+                      <strong className="text-slate-900">{activeStop.dockType}</strong>
                     </div>
                   </div>
 
-                  {/* Amber Alert */}
-                  <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-4 text-xs space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
-                      <AlertTriangle className="w-4 h-4 text-[#B45309]" />
-                      <span>Loading Shortfall Alert</span>
+                  {/* Shortfall Alert (if present) */}
+                  {activeStop.shortfallAlert && (
+                    <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-4 text-xs space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
+                        <AlertTriangle className="w-4 h-4 text-[#B45309]" />
+                        <span>Loading Shortfall Alert</span>
+                      </div>
+                      <div className="font-bold text-slate-900">
+                        {activeStop.shortfallAlert.item}: {activeStop.shortfallAlert.planned - activeStop.shortfallAlert.available} units unavailable
+                      </div>
+                      <div className="text-[#B45309] leading-relaxed">
+                        {activeStop.shortfallAlert.note}
+                      </div>
                     </div>
-                    <div className="font-bold text-slate-900">Milk: 3 units unavailable</div>
-                    <div className="text-[#B45309]">
-                      Warehouse logged shortage during LIFO bay staging. Credit note pre-applied.
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Right: Items Manifest Table */}
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs text-xs">
-                  <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                    ITEM MANIFEST VERIFICATION
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                      ITEM MANIFEST VERIFICATION
+                    </span>
+                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      {activeStop.totalCrates} Crates Total
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-2">
                     <span>PRODUCT</span>
                     <span className="text-center">PLANNED</span>
                     <span className="text-right">AVAILABLE</span>
                   </div>
-                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                    <span className="text-slate-900">Milk (20L Crate)</span>
-                    <span className="text-center text-slate-600">18</span>
-                    <span className="text-right text-amber-600 font-bold">15 ⚠️</span>
-                  </div>
-                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                    <span className="text-slate-900">Yogurt (12x500g)</span>
-                    <span className="text-center text-slate-600">10</span>
-                    <span className="text-right text-emerald-600 font-bold">10 ✓</span>
-                  </div>
-                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                    <span className="text-slate-900">Fresh Vegetables</span>
-                    <span className="text-center text-slate-600">8</span>
-                    <span className="text-right text-emerald-600 font-bold">8 ✓</span>
-                  </div>
-                  <div className="grid grid-cols-3 py-2 font-semibold items-center">
-                    <span className="text-slate-900">Frozen Chicken</span>
-                    <span className="text-center text-slate-600">4 kg</span>
-                    <span className="text-right text-emerald-600 font-bold">4 ✓</span>
-                  </div>
+                  {activeStop.items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-3 py-2 border-b border-slate-100 last:border-0 font-semibold items-center">
+                      <span className="text-slate-900">{item.product}</span>
+                      <span className="text-center text-slate-600">{item.planned}</span>
+                      <span className={`text-right font-bold ${item.status.includes('⚠️') ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {item.status}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="pt-2">
+              {/* Bottom Navigation Buttons */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('stops');
+                    setScreen('stops-list');
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Back to Today&apos;s Stops</span>
+                </button>
+
+                <div className="text-xs text-slate-500 font-semibold hidden sm:block">
+                  Stop {activeStop.num} of 3 • Step 1: Manifest
+                </div>
+
+                <button
+                  type="button"
                   onClick={() => setScreen('en-route')}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   <Navigation className="w-4 h-4" />
-                  <span>Navigate to Stop & Begin Transit</span>
+                  <span>Proceed to En Route Transit</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -683,15 +837,59 @@ export default function DriverResponsiveApp() {
           {/* SCREEN 4: EN ROUTE (Transit & Map Visual) */}
           {/* ========================================================= */}
           {screen === 'en-route' && (
-            <div className="max-w-2xl mx-auto space-y-4">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {/* Stop Workflow Stepper Bar */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold text-[11px] border border-blue-200">
+                      Stop {activeStop.num} of 3
+                    </span>
+                    <strong className="text-slate-900 text-sm">{activeStop.name} ({activeStop.outletId})</strong>
+                  </div>
+                  <span className="text-slate-500 font-semibold">
+                    Phase 2 of 3: Active Transit
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('stop-detail')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>1. Manifest Review</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('en-route')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs cursor-pointer"
+                  >
+                    <span>2. En Route</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('complete-delivery')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer"
+                  >
+                    <span>3. Digital POD</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setScreen('stop-detail')} className="p-1 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setScreen('stop-detail')}
+                    className="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 transition-all"
+                    title="Back to Manifest"
+                  >
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
                   </button>
                   <div>
                     <h1 className="text-lg font-black text-slate-900">
-                      OUT077 : Kandy Fresh
+                      {activeStop.outletId} : {activeStop.name}
                     </h1>
                     <span className="text-xs text-slate-500 font-semibold">En Route in Mountain Corridor</span>
                   </div>
@@ -700,10 +898,10 @@ export default function DriverResponsiveApp() {
                 <button
                   type="button"
                   onClick={handleSimulateConnectionLoss}
-                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1"
+                  className="px-3.5 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs"
                 >
                   <span>📶</span>
-                  <span>Simulate Connection Loss</span>
+                  <span>Simulate Drop</span>
                 </button>
               </div>
 
@@ -716,9 +914,13 @@ export default function DriverResponsiveApp() {
                   <span className="text-slate-500">Live Estimated Arrival (ETA)</span>
                   <strong className="text-blue-600 text-base font-bold">7.12AM</strong>
                 </div>
-                <div className="flex justify-between py-1">
+                <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-500">Delivery Window</span>
-                  <strong className="text-slate-900">5.00AM-7.30AM</strong>
+                  <strong className="text-slate-900">{activeStop.window}</strong>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Destination Dock</span>
+                  <strong className="text-slate-900">{activeStop.dockType}</strong>
                 </div>
               </div>
 
@@ -739,177 +941,35 @@ export default function DriverResponsiveApp() {
                 <div className="text-slate-500 pl-3">↓</div>
                 <div className="flex items-center gap-3 text-emerald-400 font-bold">
                   <span className="text-xl">📍</span>
-                  <span>Destination: OUT077 Kandy Fresh</span>
+                  <span>Destination: {activeStop.outletId} {activeStop.name}</span>
                 </div>
               </div>
 
-              <div className="pt-2">
+              {/* Bottom Navigation Buttons */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <button
-                  onClick={() => setScreen('complete-delivery')}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                  type="button"
+                  onClick={() => setScreen('stop-detail')}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
                 >
-                  I&apos;ve Arrived at Store Dock
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Back to Manifest Inspection</span>
                 </button>
-              </div>
-            </div>
-          )}
 
-          {/* ========================================================= */}
-          {/* SCREEN 5: COMPLETE DELIVERY (Proof of Delivery & Signature) */}
-          {/* ========================================================= */}
-          {screen === 'complete-delivery' && (
-            <div className="max-w-4xl mx-auto space-y-4">
-              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setScreen('en-route')} className="p-1 rounded-lg">
-                    <ArrowLeft className="w-5 h-5 text-slate-800" />
-                  </button>
-                  <h1 className="text-lg font-black text-slate-900">Complete Delivery & Digital Receipt</h1>
+                <div className="text-xs text-slate-500 font-semibold hidden sm:block">
+                  Stop {activeStop.num} of 3 • Step 2: Transit
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleSimulateConnectionLoss}
-                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1"
+                  onClick={() => setScreen('complete-delivery')}
+                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
-                  <span>📶</span>
-                  <span>Simulate Connection Loss</span>
+                  <MapPin className="w-4 h-4" />
+                  <span>I&apos;ve Arrived at Store Dock (Sign POD)</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                {/* Left: Quantity reconciliation table */}
-                <div className="space-y-4">
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1 text-xs shadow-xs">
-                    <div className="flex justify-between py-1">
-                      <span className="text-slate-500">Receiving Store</span>
-                      <strong className="text-slate-900">OUT077 : Kandy Fresh</strong>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-slate-500">Order ID</span>
-                      <strong className="text-slate-900 font-mono">WF-1043</strong>
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs text-xs">
-                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                      DELIVERY QUANTITY RECONCILIATION
-                    </div>
-                    <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-1.5">
-                      <span>PRODUCT</span>
-                      <span className="text-center">EXPECTED</span>
-                      <span className="text-right">DELIVERED</span>
-                    </div>
-                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                      <span className="text-slate-900">Milk</span>
-                      <span className="text-center text-slate-600">18</span>
-                      <span className="text-right text-amber-600 font-bold flex items-center justify-end gap-1">
-                        15 ⚠️
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                      <span className="text-slate-900">Yogurt</span>
-                      <span className="text-center text-slate-600">10</span>
-                      <span className="text-right text-emerald-600 font-bold">10 ✓</span>
-                    </div>
-                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
-                      <span className="text-slate-900">Vegetables</span>
-                      <span className="text-center text-slate-600">8</span>
-                      <span className="text-right text-emerald-600 font-bold">8 ✓</span>
-                    </div>
-                    <div className="grid grid-cols-3 py-2 font-semibold items-center">
-                      <span className="text-slate-900">Chilled Chicken</span>
-                      <span className="text-center text-slate-600">4</span>
-                      <span className="text-right text-emerald-600 font-bold">4 ✓</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-3.5 text-xs flex items-center gap-2 font-bold text-[#B45309]">
-                    <AlertTriangle className="w-4 h-4 shrink-0 text-[#B45309]" />
-                    <span>3 units of Milk short (Verified and agreed with store staff)</span>
-                  </div>
-                </div>
-
-                {/* Right: Signature Pad & Receiver Confirmation */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                      RECEIVER SIGN-OFF & POD
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
-                      Store Manager: Aravinda Silva
-                    </span>
-                  </div>
-
-                  <SignaturePad
-                    onSave={(dataUrl) => setSignatureData(dataUrl)}
-                    onClear={() => setSignatureData(null)}
-                  />
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Delivery notes & condition (optional):
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Received in good condition at rear dock..."
-                      value={deliveryNotes}
-                      onChange={(e) => setDeliveryNotes(e.target.value)}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleConfirmDelivery}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
-                  >
-                    Confirm Delivery & Record POD
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* SCREEN 6: DELIVERY COMPLETED (Success Screen) */}
-          {/* ========================================================= */}
-          {screen === 'delivery-success' && (
-            <div className="max-w-md mx-auto py-8 text-center space-y-6">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-600 shadow-md">
-                <Check className="w-10 h-10 stroke-[3]" />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-black text-slate-900">Delivery Completed!</h1>
-                <p className="text-xs font-semibold text-slate-500 mt-1">
-                  OUT077 : Kandy Fresh • Order WF-1043
-                </p>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs text-left text-xs space-y-3">
-                <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Proof of Delivery (e-POD) Cryptographically Captured</span>
-                </div>
-                <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Delivery Recorded in Local Buffer & Dispatched</span>
-                </div>
-                <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Stop Status: Delivered (Discrepancy Reconciled)</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setActiveTab('stops');
-                  setScreen('stops-list');
-                }}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all"
-              >
-                Proceed to Next Stop
-              </button>
             </div>
           )}
 
@@ -975,12 +1035,24 @@ export default function DriverResponsiveApp() {
                 You&apos;re currently operating offline. All signatures and delivery receipts are buffered locally in browser IndexedDB and will auto-reconcile once signal is restored.
               </p>
 
-              <button
-                onClick={() => setScreen('complete-delivery')}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
-              >
-                Continue Delivery in Offline Mode
-              </button>
+              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setScreen('home')}
+                  className="w-full sm:w-1/2 py-3.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Back to Route Overview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScreen('complete-delivery')}
+                  className="w-full sm:w-1/2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Continue Delivery (Offline)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1026,15 +1098,30 @@ export default function DriverResponsiveApp() {
                 <span className="text-slate-500 font-mono text-[11px]">Last synced 06:48 AM</span>
               </div>
 
-              <button
-                onClick={() => {
-                  setActiveTab('route');
-                  setScreen('home');
-                }}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
-              >
-                Continue Route
-              </button>
+              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('stops');
+                    setScreen('stops-list');
+                  }}
+                  className="w-full sm:w-1/2 py-3.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>View Today&apos;s Stops</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('route');
+                    setScreen('home');
+                  }}
+                  className="w-full sm:w-1/2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <span>Continue Active Route</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
