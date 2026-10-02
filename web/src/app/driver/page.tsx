@@ -26,6 +26,11 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   Bell,
+  Smartphone,
+  Monitor,
+  Database,
+  ThermometerSnowflake,
+  ArrowRight,
 } from 'lucide-react';
 import SignaturePad from '@/components/SignaturePad';
 import { offlineDb } from '@/lib/offline-store';
@@ -41,14 +46,15 @@ type DriverScreen =
   | 'sync-status'
   | 'settings';
 
-export default function DriverMobileFigmaApp() {
+export default function DriverResponsiveApp() {
   const router = useRouter();
   const [screen, setScreen] = useState<DriverScreen>('home');
   const [activeTab, setActiveTab] = useState<'route' | 'stops' | 'settings'>('route');
   const [isOffline, setIsOffline] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [deliveryNotes, setDeliveryNotes] = useState('');
-  const [activeStopIdx, setActiveStopIdx] = useState(1); // 1 = OUT077, 2 = OUT079, 3 = OUT080
+  const [activeStopIdx, setActiveStopIdx] = useState(1);
+  const [viewportMode, setViewportMode] = useState<'responsive' | 'phone'>('responsive');
 
   const handleSimulateConnectionLoss = () => {
     setIsOffline(true);
@@ -62,12 +68,11 @@ export default function DriverMobileFigmaApp() {
 
   const handleConfirmDelivery = async () => {
     if (!signatureData) {
-      alert('Please have the store manager sign before confirming.');
+      alert('Please have the store manager sign on the digital pad before confirming.');
       return;
     }
 
     if (isOffline) {
-      // Store in local IndexedDB
       await offlineDb.offlineActions.add({
         actionId: `OFFLINE-${Date.now()}`,
         tripId: 'TRIP-WF-1043',
@@ -98,148 +103,386 @@ export default function DriverMobileFigmaApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-slate-900 flex justify-center py-6 px-2">
-      {/* Smartphone Frame Container (Figma 390x844 specification) */}
-      <div className="w-full max-w-[420px] bg-[#F8FAFC] min-h-[844px] flex flex-col rounded-[38px] shadow-2xl border-8 border-slate-900 overflow-hidden relative">
-        
-        {/* iOS / Smartphone Status Bar Notch */}
-        <div className="bg-slate-900 text-white text-[11px] font-bold px-6 py-1 flex items-center justify-between">
-          <span>9:41</span>
-          <div className="w-24 h-4 bg-black rounded-b-xl mx-auto -mt-1" />
-          <div className="flex items-center gap-1.5">
-            {isOffline ? (
-              <span className="text-red-400 font-bold flex items-center gap-1">
-                <WifiOff className="w-3 h-3" /> No Net
-              </span>
-            ) : (
-              <span className="text-emerald-400 flex items-center gap-1">
-                <Wifi className="w-3 h-3" /> 4G
-              </span>
-            )}
-            <span>100%</span>
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* SCREEN 1: GOOD MORNING, KASUN (Page 16 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'home' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              {/* Header */}
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col">
+      {/* Top Application Navigation Bar (Responsive on desktop, sleek on mobile) */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="p-2 bg-blue-600 text-white rounded-xl shadow-xs">
+                <Truck className="w-5 h-5" />
+              </div>
               <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                  Good Morning, Kasun
-                </h1>
-                <p className="text-xs font-semibold text-slate-500">Driver</p>
+                <span className="font-extrabold text-base tracking-tight text-slate-900">WAYPOINT</span>
+                <span className="text-[11px] text-blue-600 font-bold ml-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 hidden sm:inline-block">
+                  Driver Companion
+                </span>
               </div>
+            </Link>
+          </div>
 
-              {/* Main White Card */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-4">
-                <h2 className="text-base font-extrabold text-slate-900">
-                  Kandy Fresh Route
-                </h2>
+          {/* Center Navigation Tabs (Visible on tablet & desktop) */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              onClick={() => {
+                setActiveTab('route');
+                setScreen('home');
+              }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'route'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Route Overview
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('stops');
+                setScreen('stops-list');
+              }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'stops'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Today&apos;s Stops
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('settings');
+                setScreen('settings');
+              }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'settings'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Driver Settings
+            </button>
+          </div>
 
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Vehicle</span>
-                    <strong className="text-slate-900">VEH057</strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Vehicle Type</span>
-                    <strong className="text-slate-900">Refrigerated Van</strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Starting Depot</span>
-                    <strong className="text-slate-900">Kandy Depot</strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Departure</span>
-                    <strong className="text-slate-900">4.45AM</strong>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Stops</span>
-                    <strong className="text-slate-900">3</strong>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-500 font-medium">Delivery Window</span>
-                    <strong className="text-blue-600">Before 8:00 AM</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Amber Notification Banner */}
-              <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-4 text-xs space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
-                  <AlertTriangle className="w-4 h-4 text-[#B45309]" />
-                  <span>Loading Shortfall</span>
-                </div>
-                <div className="font-bold text-slate-900">
-                  Milk 18 planned → 15 available
-                </div>
-                <div className="text-[#B45309]">3 units unavailable</div>
-              </div>
-            </div>
-
-            {/* Bottom Button */}
-            <div className="pt-4">
+          {/* Right Tools: Viewport Toggle, Online/Offline Simulator & Logout */}
+          <div className="flex items-center gap-2.5">
+            {/* Desktop / Phone Preview Toggle */}
+            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
-                onClick={() => {
-                  setActiveTab('stops');
-                  setScreen('stops-list');
-                }}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                type="button"
+                onClick={() => setViewportMode('responsive')}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                  viewportMode === 'responsive'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Full Responsive Desktop View"
               >
-                Start Route
+                <Monitor className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Web Responsive</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewportMode('phone')}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                  viewportMode === 'phone'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Simulate Mobile Viewport"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="text-[11px]">Phone Frame</span>
               </button>
             </div>
-          </div>
-        )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 2: TODAY'S STOPS (Page 17 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'stops-list' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setActiveTab('route');
-                    setScreen('home');
-                  }}
-                  className="p-1.5 rounded-lg hover:bg-slate-200"
-                >
-                  <ArrowLeft className="w-5 h-5 text-slate-700" />
-                </button>
-                <h1 className="text-xl font-black text-slate-900">Today&apos;s Stops</h1>
+            {/* Network Simulator Pill */}
+            {isOffline ? (
+              <button
+                type="button"
+                onClick={handleSimulateReconnect}
+                className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-rose-100 transition-all"
+              >
+                <WifiOff className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Offline Mode</span>
+                <span className="underline ml-1">Reconnect</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSimulateConnectionLoss}
+                className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-emerald-100 transition-all"
+              >
+                <Wifi className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">4G Cellular</span>
+                <span className="text-slate-400 font-normal hidden sm:inline">•</span>
+                <span className="text-xs text-rose-600 font-semibold underline">Simulate Drop</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-slate-200"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Container - Wraps in phone frame ONLY when Phone mode is toggled, otherwise 100% full responsive web! */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-center">
+        <div
+          className={`w-full transition-all duration-300 ${
+            viewportMode === 'phone'
+              ? 'max-w-[420px] bg-white rounded-[38px] shadow-2xl border-8 border-slate-900 p-4 sm:p-5 overflow-hidden'
+              : 'max-w-6xl'
+          }`}
+        >
+          {/* ========================================================= */}
+          {/* SCREEN 1: GOOD MORNING, KASUN (Home Screen) */}
+          {/* ========================================================= */}
+          {screen === 'home' && (
+            <div className="space-y-6">
+              {/* Header Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-3xl border border-slate-200 shadow-xs">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    Good Morning, Kasun
+                  </h1>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5">
+                    Multi-Stop Transport Driver • Route <strong>Kandy Fresh Early Run</strong>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs font-bold">
+                    <ThermometerSnowflake className="w-4 h-4 text-cyan-600" />
+                    <span>Reefer Temp: -18.2°C OK</span>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
+                    Vehicle: VEH057
+                  </span>
+                </div>
+              </div>
+
+              {/* Responsive Grid Layout on Desktop: Route Card + Next Stop */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                {/* Route Card (5 cols on desktop) */}
+                <div className="md:col-span-5 bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-extrabold text-slate-900">
+                      Kandy Fresh Route Specs
+                    </h2>
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                      TRIP-WF-1043
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Vehicle</span>
+                      <strong className="text-slate-900">VEH057 (WP-CAD-8812)</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Vehicle Type</span>
+                      <strong className="text-slate-900">Refrigerated Van (1.5T)</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Starting Depot</span>
+                      <strong className="text-slate-900">Kandy Central Depot</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Departure Time</span>
+                      <strong className="text-slate-900 font-mono">04:45 AM</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500 font-medium">Total Stops</span>
+                      <strong className="text-slate-900">3 Retail Outlets</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-slate-500 font-medium">Delivery Deadline</span>
+                      <strong className="text-blue-600 font-bold">Strictly Before 8:00 AM</strong>
+                    </div>
+                  </div>
+
+                  {/* Amber Loading Shortfall Notification */}
+                  <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-4 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
+                      <AlertTriangle className="w-4 h-4 text-[#B45309]" />
+                      <span>Warehouse Loading Shortfall Alert</span>
+                    </div>
+                    <div className="font-bold text-slate-900">
+                      Milk: 18 planned → 15 available
+                    </div>
+                    <div className="text-[#B45309]">
+                      3 units unavailable at depot. Advance note logged for store manager.
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setActiveTab('stops');
+                      setScreen('stops-list');
+                    }}
+                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>View Today&apos;s Route & Stops</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Today's Stops Preview (7 cols on desktop) */}
+                <div className="md:col-span-7 space-y-4">
+                  <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-blue-600" />
+                        <span>Delivery Sequence (LIFO Enforced)</span>
+                      </h2>
+                      <span className="text-xs font-semibold text-slate-500">
+                        Stop 1 is closest to door
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Stop 1 */}
+                      <div className="p-4 rounded-2xl border-2 border-blue-600 bg-blue-50/30 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                            1
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <strong className="text-sm text-slate-900">OUT077 : Kandy Fresh</strong>
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                🟢 Next Up
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500">
+                              Window: <strong>5.00AM:7.30AM</strong> • 15 Units Crates
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setActiveStopIdx(1);
+                            setScreen('stop-detail');
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 transition-all shadow-xs"
+                        >
+                          Open Stop 1
+                        </button>
+                      </div>
+
+                      {/* Stop 2 */}
+                      <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-center justify-between opacity-90">
+                        <div className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                            2
+                          </span>
+                          <div>
+                            <strong className="text-sm text-slate-800">OUT079 : Kandy Fresh</strong>
+                            <div className="text-xs text-slate-500">
+                              Window: 4.00AM:7.45AM • 15 Crates
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setActiveStopIdx(2);
+                            setScreen('stop-detail');
+                          }}
+                          className="px-4 py-2 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-all"
+                        >
+                          Open Stop 2
+                        </button>
+                      </div>
+
+                      {/* Stop 3 */}
+                      <div className="p-4 rounded-2xl border border-slate-200 bg-white flex items-center justify-between opacity-90">
+                        <div className="flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                            3
+                          </span>
+                          <div>
+                            <strong className="text-sm text-slate-800">OUT080 : Kadugannawa</strong>
+                            <div className="text-xs text-slate-500">
+                              Window: 5.30AM:8.00AM • 14 Crates
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setActiveStopIdx(3);
+                            setScreen('stop-detail');
+                          }}
+                          className="px-4 py-2 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-all"
+                        >
+                          Open Stop 3
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* SCREEN 2: TODAY'S STOPS (Expanded Timeline View) */}
+          {/* ========================================================= */}
+          {screen === 'stops-list' && (
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setActiveTab('route');
+                      setScreen('home');
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-slate-100"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-slate-700" />
+                  </button>
+                  <h1 className="text-lg font-black text-slate-900">Today&apos;s Delivery Manifest</h1>
+                </div>
+
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  Route WF-1043 (VEH057)
+                </span>
               </div>
 
               {/* Depot Origin */}
-              <div className="text-center text-xs font-bold text-slate-600 bg-white border border-slate-200 py-2.5 rounded-xl shadow-xs flex items-center justify-center gap-2">
+              <div className="text-center text-xs font-bold text-slate-700 bg-white border border-slate-200 py-3 rounded-2xl shadow-xs flex items-center justify-center gap-2">
                 <span>🏭</span>
-                <span>Kandy Depot</span>
+                <span>Depot Departure: Kandy Central DC (04:45 AM)</span>
               </div>
 
-              <div className="text-center text-slate-400 -my-2 font-bold text-sm">↓</div>
+              <div className="text-center text-slate-400 -my-2 font-bold text-base">↓</div>
 
-              {/* Stop 1 Card (Active Blue Card) */}
-              <div className="bg-white border-2 border-blue-600 rounded-3xl p-4 shadow-sm space-y-3">
+              {/* Stop 1 Card */}
+              <div className="bg-white border-2 border-blue-600 rounded-3xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
                       1
                     </span>
-                    <span className="font-extrabold text-sm text-slate-900">
-                      OUT077 : Kandy
-                    </span>
+                    <div>
+                      <strong className="text-base text-slate-900">OUT077 : Kandy Fresh</strong>
+                      <span className="text-xs text-slate-500 block">Van Only Parking Dock • Street Access</span>
+                    </div>
                   </div>
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
                     🟢 Next
                   </span>
                 </div>
 
-                <div className="flex justify-between text-xs text-slate-500 font-medium">
+                <div className="flex justify-between text-xs text-slate-600 border-t pt-2">
                   <span>Delivery Window</span>
                   <strong className="text-slate-900">5.00AM:7.30AM</strong>
                 </div>
@@ -249,31 +492,32 @@ export default function DriverMobileFigmaApp() {
                     setActiveStopIdx(1);
                     setScreen('stop-detail');
                   }}
-                  className="w-full py-2.5 border border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-xl text-xs transition-all"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs"
                 >
-                  Open Stop
+                  Open Stop #1 Details & Checklist
                 </button>
               </div>
 
-              <div className="text-center text-slate-400 -my-2 font-bold text-sm">↓</div>
+              <div className="text-center text-slate-400 -my-2 font-bold text-base">↓</div>
 
               {/* Stop 2 Card */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm space-y-3 opacity-90">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
                       2
                     </span>
-                    <span className="font-bold text-sm text-slate-800">
-                      OUT079 : Kandy
-                    </span>
+                    <div>
+                      <strong className="text-base text-slate-800">OUT079 : Kandy Fresh</strong>
+                      <span className="text-xs text-slate-500 block">Rear Dock • Peradeniya Road</span>
+                    </div>
                   </div>
-                  <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                     ○ Upcoming
                   </span>
                 </div>
 
-                <div className="flex justify-between text-xs text-slate-500">
+                <div className="flex justify-between text-xs text-slate-600 border-t pt-2">
                   <span>Delivery Window</span>
                   <strong className="text-slate-700">4.00AM:7.45AM</strong>
                 </div>
@@ -283,31 +527,32 @@ export default function DriverMobileFigmaApp() {
                     setActiveStopIdx(2);
                     setScreen('stop-detail');
                   }}
-                  className="w-full py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs transition-all"
+                  className="w-full py-3 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs transition-all"
                 >
-                  Open Stop
+                  Open Stop #2
                 </button>
               </div>
 
-              <div className="text-center text-slate-400 -my-2 font-bold text-sm">↓</div>
+              <div className="text-center text-slate-400 -my-2 font-bold text-base">↓</div>
 
               {/* Stop 3 Card */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm space-y-3 opacity-90">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                  <div className="flex items-center gap-3">
+                    <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
                       3
                     </span>
-                    <span className="font-bold text-sm text-slate-800">
-                      OUT080 : Kandy
-                    </span>
+                    <div>
+                      <strong className="text-base text-slate-800">OUT080 : Kadugannawa Express</strong>
+                      <span className="text-xs text-slate-500 block">Main Street Front Door</span>
+                    </div>
                   </div>
-                  <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                     ○ Upcoming
                   </span>
                 </div>
 
-                <div className="flex justify-between text-xs text-slate-500">
+                <div className="flex justify-between text-xs text-slate-600 border-t pt-2">
                   <span>Delivery Window</span>
                   <strong className="text-slate-700">5.30AM:8.00AM</strong>
                 </div>
@@ -317,24 +562,22 @@ export default function DriverMobileFigmaApp() {
                     setActiveStopIdx(3);
                     setScreen('stop-detail');
                   }}
-                  className="w-full py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs transition-all"
+                  className="w-full py-3 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl text-xs transition-all"
                 >
-                  Open Stop
+                  Open Stop #3
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 3: STOP DETAIL (Page 18 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'stop-detail' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setScreen('stops-list')} className="p-1 rounded-lg">
+          {/* ========================================================= */}
+          {/* SCREEN 3: STOP DETAIL (Items Table & Delivery Info) */}
+          {/* ========================================================= */}
+          {screen === 'stop-detail' && (
+            <div className="max-w-4xl mx-auto space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setScreen('stops-list')} className="p-1.5 rounded-lg hover:bg-slate-100">
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
                   </button>
                   <div>
@@ -345,97 +588,103 @@ export default function DriverMobileFigmaApp() {
                   </div>
                 </div>
 
-                {/* Simulate Connection Loss Button */}
                 <button
                   type="button"
                   onClick={handleSimulateConnectionLoss}
-                  className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[11px] font-bold flex items-center gap-1 hover:bg-rose-100 transition-all"
+                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 transition-all"
                 >
                   <span>📶</span>
                   <span>Simulate Connection Loss</span>
                 </button>
               </div>
 
-              {/* Delivery Information Card */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs shadow-xs">
-                <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  DELIVERY INFORMATION
+              {/* 2-Column Responsive Layout on Desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {/* Left: Delivery Info & Shortfall Notice */}
+                <div className="space-y-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs shadow-xs">
+                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                      DELIVERY INFORMATION
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Order ID</span>
+                      <strong className="text-slate-900 font-mono">WF-1043</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Delivery Window</span>
+                      <strong className="text-slate-900">3.00AM:8.00AM</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-slate-500">Assigned Vehicle</span>
+                      <strong className="text-slate-900">VEH057 (Van Reefer)</strong>
+                    </div>
+                  </div>
+
+                  {/* Amber Alert */}
+                  <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-4 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
+                      <AlertTriangle className="w-4 h-4 text-[#B45309]" />
+                      <span>Loading Shortfall Alert</span>
+                    </div>
+                    <div className="font-bold text-slate-900">Milk: 3 units unavailable</div>
+                    <div className="text-[#B45309]">
+                      Warehouse logged shortage during LIFO bay staging. Credit note pre-applied.
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Order</span>
-                  <strong className="text-slate-900">WF-1043</strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Delivery Window</span>
-                  <strong className="text-slate-900">3.00AM:8.00AM</strong>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Vehicle</span>
-                  <strong className="text-slate-900">VEH057</strong>
+
+                {/* Right: Items Manifest Table */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs text-xs">
+                  <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                    ITEM MANIFEST VERIFICATION
+                  </div>
+                  <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-2">
+                    <span>PRODUCT</span>
+                    <span className="text-center">PLANNED</span>
+                    <span className="text-right">AVAILABLE</span>
+                  </div>
+                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                    <span className="text-slate-900">Milk (20L Crate)</span>
+                    <span className="text-center text-slate-600">18</span>
+                    <span className="text-right text-amber-600 font-bold">15 ⚠️</span>
+                  </div>
+                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                    <span className="text-slate-900">Yogurt (12x500g)</span>
+                    <span className="text-center text-slate-600">10</span>
+                    <span className="text-right text-emerald-600 font-bold">10 ✓</span>
+                  </div>
+                  <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                    <span className="text-slate-900">Fresh Vegetables</span>
+                    <span className="text-center text-slate-600">8</span>
+                    <span className="text-right text-emerald-600 font-bold">8 ✓</span>
+                  </div>
+                  <div className="grid grid-cols-3 py-2 font-semibold items-center">
+                    <span className="text-slate-900">Frozen Chicken</span>
+                    <span className="text-center text-slate-600">4 kg</span>
+                    <span className="text-right text-emerald-600 font-bold">4 ✓</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs text-xs">
-                <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">ITEMS</div>
-                <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-1.5">
-                  <span>PRODUCT</span>
-                  <span className="text-center">PLANNED</span>
-                  <span className="text-right">AVAILABLE</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Milk</span>
-                  <span className="text-center text-slate-600">18</span>
-                  <span className="text-right text-amber-600 font-bold">15</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Yogurt</span>
-                  <span className="text-center text-slate-600">10</span>
-                  <span className="text-right text-emerald-600 font-bold">10</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Vegetables</span>
-                  <span className="text-center text-slate-600">8</span>
-                  <span className="text-right text-emerald-600 font-bold">8</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 font-semibold">
-                  <span className="text-slate-900">Frozen Chicken</span>
-                  <span className="text-center text-slate-600">4 kg</span>
-                  <span className="text-right text-emerald-600 font-bold">4</span>
-                </div>
-              </div>
-
-              {/* Amber Loading Shortfall Alert */}
-              <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-3.5 text-xs space-y-0.5">
-                <div className="flex items-center gap-1.5 font-bold text-[#B45309]">
-                  <AlertTriangle className="w-4 h-4 text-[#B45309]" />
-                  <span>Loading Shortfall</span>
-                </div>
-                <div className="text-[#B45309] font-medium ml-5">
-                  Milk: 3 units unavailable
-                </div>
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setScreen('en-route')}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>Navigate to Stop & Begin Transit</span>
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Bottom Button */}
-            <div className="pt-4">
-              <button
-                onClick={() => setScreen('en-route')}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
-              >
-                Navigate to Stop
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* SCREEN 4: EN ROUTE (Page 19 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'en-route' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+          {/* ========================================================= */}
+          {/* SCREEN 4: EN ROUTE (Transit & Map Visual) */}
+          {/* ========================================================= */}
+          {screen === 'en-route' && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-2">
                   <button onClick={() => setScreen('stop-detail')} className="p-1 rounded-lg">
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
@@ -444,14 +693,14 @@ export default function DriverMobileFigmaApp() {
                     <h1 className="text-lg font-black text-slate-900">
                       OUT077 : Kandy Fresh
                     </h1>
-                    <span className="text-xs text-slate-500 font-semibold">En Route</span>
+                    <span className="text-xs text-slate-500 font-semibold">En Route in Mountain Corridor</span>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleSimulateConnectionLoss}
-                  className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[11px] font-bold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1"
                 >
                   <span>📶</span>
                   <span>Simulate Connection Loss</span>
@@ -464,8 +713,8 @@ export default function DriverMobileFigmaApp() {
                   TRIP INFORMATION
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">ETA</span>
-                  <strong className="text-blue-600 font-bold">7.12AM</strong>
+                  <span className="text-slate-500">Live Estimated Arrival (ETA)</span>
+                  <strong className="text-blue-600 text-base font-bold">7.12AM</strong>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Delivery Window</span>
@@ -473,452 +722,429 @@ export default function DriverMobileFigmaApp() {
                 </div>
               </div>
 
-              {/* Dark Route Box matching Figma */}
-              <div className="bg-[#0E1626] text-white rounded-3xl p-5 space-y-3 font-semibold text-xs shadow-md">
-                <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider mb-2">
-                  ROUTE
+              {/* Dark Route Card from Figma */}
+              <div className="bg-[#0E1626] text-white rounded-3xl p-6 space-y-4 font-semibold text-sm shadow-md">
+                <div className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                  LIVE ROUTE TRANSIT
                 </div>
-                <div className="flex items-center gap-2">
-                  <span>🏭</span>
-                  <span>Kandy Depot</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🏭</span>
+                  <span>Kandy Central Depot (Departed 04:50 AM)</span>
                 </div>
-                <div className="text-slate-400 pl-2">↓</div>
-                <div className="flex items-center gap-2 text-blue-400">
-                  <span>🚚</span>
-                  <span>Current Location</span>
+                <div className="text-slate-500 pl-3">↓</div>
+                <div className="flex items-center gap-3 text-blue-400 font-bold">
+                  <span className="text-xl">🚚</span>
+                  <span>Current Roadside Location (Kandy Hill Road)</span>
                 </div>
-                <div className="text-slate-400 pl-2">↓</div>
-                <div className="flex items-center gap-2 text-emerald-400">
-                  <span>📍</span>
-                  <span>OUT79 : Kandy Fresh</span>
+                <div className="text-slate-500 pl-3">↓</div>
+                <div className="flex items-center gap-3 text-emerald-400 font-bold">
+                  <span className="text-xl">📍</span>
+                  <span>Destination: OUT077 Kandy Fresh</span>
                 </div>
               </div>
-            </div>
 
-            <div className="pt-4">
-              <button
-                onClick={() => setScreen('complete-delivery')}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
-              >
-                I&apos;ve Arrived
-              </button>
+              <div className="pt-2">
+                <button
+                  onClick={() => setScreen('complete-delivery')}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                >
+                  I&apos;ve Arrived at Store Dock
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 5: COMPLETE DELIVERY (Page 20 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'complete-delivery' && (
-          <div className="flex-1 p-5 flex flex-col justify-between overflow-y-auto">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+          {/* ========================================================= */}
+          {/* SCREEN 5: COMPLETE DELIVERY (Proof of Delivery & Signature) */}
+          {/* ========================================================= */}
+          {screen === 'complete-delivery' && (
+            <div className="max-w-4xl mx-auto space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-2">
                   <button onClick={() => setScreen('en-route')} className="p-1 rounded-lg">
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
                   </button>
-                  <h1 className="text-lg font-black text-slate-900">Complete Delivery</h1>
+                  <h1 className="text-lg font-black text-slate-900">Complete Delivery & Digital Receipt</h1>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleSimulateConnectionLoss}
-                  className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[11px] font-bold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1"
                 >
                   <span>📶</span>
                   <span>Simulate Connection Loss</span>
                 </button>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Store</span>
-                  <strong className="text-slate-900">OUT077 : Kandy Fresh</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Order</span>
-                  <strong className="text-slate-900">WF-1043</strong>
-                </div>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {/* Left: Quantity reconciliation table */}
+                <div className="space-y-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1 text-xs shadow-xs">
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-500">Receiving Store</span>
+                      <strong className="text-slate-900">OUT077 : Kandy Fresh</strong>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span className="text-slate-500">Order ID</span>
+                      <strong className="text-slate-900 font-mono">WF-1043</strong>
+                    </div>
+                  </div>
 
-              {/* Delivery Quantity Table */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-xs text-xs">
-                <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  DELIVERY QUANTITY
-                </div>
-                <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-1.5">
-                  <span>PRODUCT</span>
-                  <span className="text-center">EXPECTED</span>
-                  <span className="text-right">DELIVERED</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Milk</span>
-                  <span className="text-center text-slate-600">18</span>
-                  <span className="text-right text-amber-600 font-bold flex items-center justify-end gap-1">
-                    15 <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Yogurt</span>
-                  <span className="text-center text-slate-600">10</span>
-                  <span className="text-right text-emerald-600 font-bold">10</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 border-b border-slate-100 font-semibold">
-                  <span className="text-slate-900">Vegetables</span>
-                  <span className="text-center text-slate-600">8</span>
-                  <span className="text-right text-emerald-600 font-bold">8</span>
-                </div>
-                <div className="grid grid-cols-3 py-1.5 font-semibold">
-                  <span className="text-slate-900">Chilled Chicken</span>
-                  <span className="text-center text-slate-600">4</span>
-                  <span className="text-right text-emerald-600 font-bold">4</span>
-                </div>
-              </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs text-xs">
+                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                      DELIVERY QUANTITY RECONCILIATION
+                    </div>
+                    <div className="grid grid-cols-3 font-bold text-slate-400 text-[11px] border-b pb-1.5">
+                      <span>PRODUCT</span>
+                      <span className="text-center">EXPECTED</span>
+                      <span className="text-right">DELIVERED</span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                      <span className="text-slate-900">Milk</span>
+                      <span className="text-center text-slate-600">18</span>
+                      <span className="text-right text-amber-600 font-bold flex items-center justify-end gap-1">
+                        15 ⚠️
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                      <span className="text-slate-900">Yogurt</span>
+                      <span className="text-center text-slate-600">10</span>
+                      <span className="text-right text-emerald-600 font-bold">10 ✓</span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2 border-b border-slate-100 font-semibold items-center">
+                      <span className="text-slate-900">Vegetables</span>
+                      <span className="text-center text-slate-600">8</span>
+                      <span className="text-right text-emerald-600 font-bold">8 ✓</span>
+                    </div>
+                    <div className="grid grid-cols-3 py-2 font-semibold items-center">
+                      <span className="text-slate-900">Chilled Chicken</span>
+                      <span className="text-center text-slate-600">4</span>
+                      <span className="text-right text-emerald-600 font-bold">4 ✓</span>
+                    </div>
+                  </div>
 
-              {/* Warning Shortfall */}
-              <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-3 text-xs flex items-center gap-2 font-bold text-[#B45309]">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-[#B45309]" />
-                <span>3 units of Milk short</span>
-              </div>
-
-              {/* Receiver Info & Signature Area */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs text-xs">
-                <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  RECEIVER INFORMATION
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-slate-500">Receiver</span>
-                  <strong className="text-slate-900">Store Manager</strong>
+                  <div className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-3.5 text-xs flex items-center gap-2 font-bold text-[#B45309]">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-[#B45309]" />
+                    <span>3 units of Milk short (Verified and agreed with store staff)</span>
+                  </div>
                 </div>
 
-                <SignaturePad
-                  onSave={(dataUrl) => setSignatureData(dataUrl)}
-                  onClear={() => setSignatureData(null)}
-                />
+                {/* Right: Signature Pad & Receiver Confirmation */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                      RECEIVER SIGN-OFF & POD
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[11px]">
+                      Store Manager: Aravinda Silva
+                    </span>
+                  </div>
 
-                <input
-                  type="text"
-                  placeholder="Delivery notes (optional)"
-                  value={deliveryNotes}
-                  onChange={(e) => setDeliveryNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+                  <SignaturePad
+                    onSave={(dataUrl) => setSignatureData(dataUrl)}
+                    onClear={() => setSignatureData(null)}
+                  />
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Delivery notes & condition (optional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Received in good condition at rear dock..."
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleConfirmDelivery}
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
+                  >
+                    Confirm Delivery & Record POD
+                  </button>
+                </div>
               </div>
             </div>
+          )}
 
-            <div className="pt-4">
-              <button
-                onClick={handleConfirmDelivery}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
-              >
-                Confirm Delivery
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================= */}
-        {/* SCREEN 6: DELIVERY COMPLETED (Page 21 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'delivery-success' && (
-          <div className="flex-1 p-5 flex flex-col justify-between items-center text-center">
-            <div className="w-full space-y-6 pt-8">
-              {/* Green check icon matching Figma */}
+          {/* ========================================================= */}
+          {/* SCREEN 6: DELIVERY COMPLETED (Success Screen) */}
+          {/* ========================================================= */}
+          {screen === 'delivery-success' && (
+            <div className="max-w-md mx-auto py-8 text-center space-y-6">
               <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-600 shadow-md">
                 <Check className="w-10 h-10 stroke-[3]" />
               </div>
 
               <div>
-                <h1 className="text-2xl font-black text-slate-900">Delivery Completed</h1>
+                <h1 className="text-2xl font-black text-slate-900">Delivery Completed!</h1>
                 <p className="text-xs font-semibold text-slate-500 mt-1">
                   OUT077 : Kandy Fresh • Order WF-1043
                 </p>
               </div>
 
-              {/* White verification card */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm text-left text-xs space-y-3">
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs text-left text-xs space-y-3">
                 <div className="flex items-center gap-2 text-emerald-700 font-bold">
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>POD Saved</span>
+                  <span>Proof of Delivery (e-POD) Cryptographically Captured</span>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-700 font-bold">
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Delivery Recorded</span>
+                  <span>Delivery Recorded in Local Buffer & Dispatched</span>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-700 font-bold">
                   <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Status: Delivered</span>
+                  <span>Stop Status: Delivered (Discrepancy Reconciled)</span>
                 </div>
               </div>
-            </div>
 
-            <div className="w-full pt-4">
               <button
                 onClick={() => {
                   setActiveTab('stops');
                   setScreen('stops-list');
                 }}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-blue-500/25 active:scale-[0.98] transition-all"
               >
-                Next Stop
+                Proceed to Next Stop
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 7: OFFLINE MODE (Page 22 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'offline-mode' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+          {/* ========================================================= */}
+          {/* SCREEN 7: OFFLINE MODE (No Internet Connection) */}
+          {/* ========================================================= */}
+          {screen === 'offline-mode' && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                 <div className="flex items-center gap-2">
                   <button onClick={() => setScreen('home')} className="p-1 rounded-lg">
                     <ArrowLeft className="w-5 h-5 text-slate-800" />
                   </button>
-                  <h1 className="text-lg font-black text-slate-900">OUT077 : Kandy</h1>
+                  <h1 className="text-lg font-black text-slate-900">Field Connectivity: Dead Zone</h1>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleSimulateReconnect}
-                  className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[11px] font-bold flex items-center gap-1"
+                  className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 transition-all"
                 >
                   <span>🔄</span>
-                  <span>Simulate Reconnect</span>
+                  <span>Simulate Reconnect (4G Active)</span>
                 </button>
               </div>
 
-              {/* Red offline banner */}
               <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 flex items-center gap-2 text-xs font-bold text-[#991B1B]">
-                <span className="text-red-500 text-sm">🔴</span>
-                <span>No Internet Connection</span>
+                <span className="text-red-500 text-base">🔴</span>
+                <span>No Internet Connection Detected</span>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs shadow-xs">
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-500">Last Synced</span>
-                  <strong className="text-slate-900">6:42 AM</strong>
+                  <span className="text-slate-500">Last Synced to Waypoint Cloud</span>
+                  <strong className="text-slate-900 font-mono">06:42 AM</strong>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Pending Changes</span>
-                  <strong className="text-red-600 font-bold">1</strong>
+                  <span className="text-slate-500">Pending Local Changes</span>
+                  <strong className="text-red-600 font-bold">1 Delivery Buffered in IndexedDB</strong>
                 </div>
               </div>
 
-              {/* DRIVER CAN STILL Card */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs text-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs text-xs">
                 <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  DRIVER CAN STILL
+                  DRIVER CAN STILL SAFELY EXECUTE
                 </div>
                 {[
-                  "View today's route",
-                  'View stops',
-                  'View order details',
-                  'Record delivery',
-                  'Capture POD',
-                  'Continue delivery',
+                  "View today's entire route manifest",
+                  'Inspect all stop delivery windows and dock constraints',
+                  'View order item counts and product manifests',
+                  'Record stop delivery status and timestamps',
+                  'Capture customer signatures on digital touch pad',
+                  'Continue multi-stop trip without blocking',
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-2 text-emerald-700 font-bold">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <div key={item} className="flex items-center gap-2.5 text-emerald-700 font-bold">
+                    <Check className="w-4 h-4 stroke-[3]" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
 
-              <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-                You&apos;re offline. Your delivery records will sync automatically when the connection returns.
+              <p className="text-xs text-slate-500 text-center leading-relaxed">
+                You&apos;re currently operating offline. All signatures and delivery receipts are buffered locally in browser IndexedDB and will auto-reconcile once signal is restored.
               </p>
-            </div>
 
-            <div className="pt-4">
               <button
                 onClick={() => setScreen('complete-delivery')}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
               >
-                Continue Delivery
+                Continue Delivery in Offline Mode
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 8: SYNC STATUS (Page 23 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'sync-status' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
-              <h1 className="text-xl font-black text-slate-900">Sync Status</h1>
+          {/* ========================================================= */}
+          {/* SCREEN 8: SYNC STATUS (Reconciliation Complete) */}
+          {/* ========================================================= */}
+          {screen === 'sync-status' && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              <h1 className="text-xl font-black text-slate-900">Sync & Reconciliation Status</h1>
 
-              {/* Green Connection Restored Card */}
               <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-4 text-xs space-y-1">
                 <div className="flex items-center gap-2 font-bold text-[#166534]">
                   <span>🟢</span>
-                  <span>Connection Restored</span>
+                  <span>4G Cellular Connection Restored</span>
                 </div>
-                <div className="text-slate-600 ml-5">Syncing delivery records...</div>
+                <div className="text-slate-600 ml-5">
+                  Synchronizing buffered delivery records with central Waypoint dispatch server...
+                </div>
               </div>
 
-              {/* Sync Progress Card */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 shadow-xs text-xs">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs text-xs">
                 <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                  SYNC PROGRESS
+                  SYNC PROGRESS RECONCILIATION
                 </div>
                 {[
-                  'Delivery recorded',
-                  'POD saved',
-                  'Delivery status updated',
-                  'Route progress updated',
+                  'Delivery record verified against dispatcher schedule',
+                  'POD digital signature synchronized to cloud storage',
+                  'Delivery status updated to COMPLETED',
+                  'Route telemetry restored and GPS lock refreshed',
                 ].map((s) => (
-                  <div key={s} className="flex items-center gap-2 text-emerald-700 font-bold">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <div key={s} className="flex items-center gap-2.5 text-emerald-700 font-bold">
+                    <Check className="w-4 h-4 stroke-[3]" />
                     <span>{s}</span>
                   </div>
                 ))}
               </div>
 
-              {/* All changes synced banner */}
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3.5 flex items-center justify-between text-xs font-bold">
-                <span className="text-blue-800 flex items-center gap-1.5">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between text-xs font-bold">
+                <span className="text-blue-800 flex items-center gap-2">
                   <span>✅</span>
-                  <span>All changes synced</span>
+                  <span>All changes synced successfully</span>
                 </span>
-                <span className="text-slate-500 text-[11px] font-mono">Last synced 6:48 AM</span>
+                <span className="text-slate-500 font-mono text-[11px]">Last synced 06:48 AM</span>
               </div>
-            </div>
 
-            <div className="pt-4">
               <button
                 onClick={() => {
                   setActiveTab('route');
                   setScreen('home');
                 }}
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-sm shadow-md active:scale-[0.98] transition-all"
               >
                 Continue Route
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ========================================================= */}
-        {/* SCREEN 9: SETTINGS (Page 24 in Figma) */}
-        {/* ========================================================= */}
-        {screen === 'settings' && (
-          <div className="flex-1 p-5 flex flex-col justify-between">
-            <div className="space-y-4">
+          {/* ========================================================= */}
+          {/* SCREEN 9: SETTINGS */}
+          {/* ========================================================= */}
+          {screen === 'settings' && (
+            <div className="max-w-2xl mx-auto space-y-4">
               <div>
-                <h1 className="text-xl font-black text-slate-900">Settings</h1>
-                <p className="text-xs text-slate-500">Kasun • Driver</p>
+                <h1 className="text-xl font-black text-slate-900">Driver Profile & Settings</h1>
+                <p className="text-xs text-slate-500">Kasun Bandara • Senior Transport Driver</p>
               </div>
 
-              {/* User profile card */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-black text-base flex items-center justify-center">
-                  K
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 font-black text-xl flex items-center justify-center">
+                  KB
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-slate-900">Kasun</h3>
+                  <h3 className="font-extrabold text-base text-slate-900">Kasun Bandara</h3>
                   <p className="text-xs text-slate-500">
-                    Vehicle VEH057 • Refrigerated Van
+                    Assigned Vehicle: <strong>VEH057</strong> • Isuzu N-Series Refrigerated Van
                   </p>
                 </div>
               </div>
 
-              {/* Options list */}
               <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100 shadow-xs text-xs">
-                <div className="text-[10px] uppercase font-bold text-slate-400 p-3 pb-1 tracking-wider">
-                  OPTIONS
+                <div className="text-[10px] uppercase font-bold text-slate-400 p-3.5 pb-1 tracking-wider">
+                  DRIVER CONTROLS
                 </div>
-                <div className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
-                  <span className="font-semibold text-slate-800 flex items-center gap-2">
+                <div className="p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
+                  <span className="font-semibold text-slate-800 flex items-center gap-2.5">
                     <span>📄</span>
-                    <span>Trip History</span>
+                    <span>Trip History & Completed POD Logs</span>
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
-                <div className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
-                  <span className="font-semibold text-slate-800 flex items-center gap-2">
+                <div className="p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
+                  <span className="font-semibold text-slate-800 flex items-center gap-2.5">
                     <span>⚙️</span>
-                    <span>App Settings</span>
+                    <span>App Preferences & Offline Storage Settings</span>
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
-                <div className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
-                  <span className="font-semibold text-slate-800 flex items-center gap-2">
+                <div className="p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
+                  <span className="font-semibold text-slate-800 flex items-center gap-2.5">
                     <span>🛟</span>
-                    <span>Help & Support</span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
-                  <span className="font-semibold text-slate-800 flex items-center gap-2">
-                    <span>🔔</span>
-                    <span>Notifications</span>
+                    <span>Help & Operational Support Helpline</span>
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
                 </div>
                 <div
                   onClick={handleLogout}
-                  className="p-3.5 flex items-center justify-between hover:bg-red-50 text-red-600 cursor-pointer"
+                  className="p-4 flex items-center justify-between hover:bg-red-50 text-red-600 cursor-pointer"
                 >
-                  <span className="font-bold flex items-center gap-2">
+                  <span className="font-bold flex items-center gap-2.5">
                     <span>🚪</span>
-                    <span>Log Out</span>
+                    <span>Sign Out of Driver Session</span>
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </main>
 
-        {/* Bottom 3-Tab Bar matching Figma */}
-        <footer className="bg-white border-t border-slate-200 py-3 px-6 flex items-center justify-around">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('route');
-              setScreen('home');
-            }}
-            className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
-              activeTab === 'route' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <span className="text-base">{activeTab === 'route' ? '●' : '○'}</span>
-            <span>Route</span>
-          </button>
+      {/* Mobile Bottom Tab Bar (Visible on mobile viewports only) */}
+      <footer className="md:hidden bg-white border-t border-slate-200 py-3 px-6 flex items-center justify-around sticky bottom-0 z-30">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('route');
+            setScreen('home');
+          }}
+          className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
+            activeTab === 'route' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <span className="text-base">{activeTab === 'route' ? '●' : '○'}</span>
+          <span>Route</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('stops');
-              setScreen('stops-list');
-            }}
-            className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
-              activeTab === 'stops' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <span className="text-base">{activeTab === 'stops' ? '●' : '○'}</span>
-            <span>Stops</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('stops');
+            setScreen('stops-list');
+          }}
+          className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
+            activeTab === 'stops' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <span className="text-base">{activeTab === 'stops' ? '●' : '○'}</span>
+          <span>Stops</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('settings');
-              setScreen('settings');
-            }}
-            className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
-              activeTab === 'settings' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <span className="text-base">{activeTab === 'settings' ? '●' : '○'}</span>
-            <span>Settings</span>
-          </button>
-        </footer>
-      </div>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('settings');
+            setScreen('settings');
+          }}
+          className={`flex flex-col items-center gap-1 text-xs font-bold transition-all ${
+            activeTab === 'settings' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <span className="text-base">{activeTab === 'settings' ? '●' : '○'}</span>
+          <span>Settings</span>
+        </button>
+      </footer>
     </div>
   );
 }
