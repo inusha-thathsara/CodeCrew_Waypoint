@@ -36,9 +36,26 @@ type LoaderScreen =
   | 'stowage-sealing'
   | 'gate-pass';
 
+const LOADER_STEPS: { id: LoaderScreen; stepNum: number; label: string; actionLabel: string }[] = [
+  { id: 'dock-master', stepNum: 1, label: 'Dock Master', actionLabel: 'Enter Bay 04 Kiosk' },
+  { id: 'pre-cooling-inspection', stepNum: 2, label: 'Pre-Cooling', actionLabel: 'Approve Inspection' },
+  { id: 'lifo-staging', stepNum: 3, label: 'LIFO Staging', actionLabel: 'Launch RF Scanner' },
+  { id: 'rf-scanner', stepNum: 4, label: 'Barcode Scan', actionLabel: 'Scan Next Crate' },
+  { id: 'shortfall-exception', stepNum: 5, label: 'Shortfall Alert', actionLabel: 'Request Supervisor Override' },
+  { id: 'supervisor-override', stepNum: 6, label: 'Override PIN', actionLabel: 'Confirm & Stow Van' },
+  { id: 'stowage-sealing', stepNum: 7, label: 'Bolt Sealing', actionLabel: 'Proceed to Gate Pass' },
+  { id: 'gate-pass', stepNum: 8, label: 'Gate Clearance', actionLabel: 'Authorize Exit & Depart' },
+];
+
 export default function LoaderKioskPage() {
   const router = useRouter();
   const [screen, setScreen] = useState<LoaderScreen>('lifo-staging');
+
+  // Active step helpers
+  const currentStepIdx = LOADER_STEPS.findIndex((s) => s.id === screen);
+  const currentStep = LOADER_STEPS[currentStepIdx] || LOADER_STEPS[0];
+  const prevStep = currentStepIdx > 0 ? LOADER_STEPS[currentStepIdx - 1] : null;
+  const nextStep = currentStepIdx < LOADER_STEPS.length - 1 ? LOADER_STEPS[currentStepIdx + 1] : null;
 
   // Inspection checklist state
   const [inspections, setInspections] = useState({
@@ -84,16 +101,7 @@ export default function LoaderKioskPage() {
       {process.env.NODE_ENV !== 'production' && (
         <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
           <div className="flex flex-wrap items-center justify-center gap-1.5 bg-[#161E2E] border border-[#2E3A52] p-1.5 rounded-full shadow-lg">
-            {[
-              { id: 'dock-master', label: '1. Dock Master' },
-              { id: 'pre-cooling-inspection', label: '2. Inspection' },
-              { id: 'lifo-staging', label: '3. LIFO Staging' },
-              { id: 'rf-scanner', label: '4. Barcode Scan' },
-              { id: 'shortfall-exception', label: '5. Shortfall Alert' },
-              { id: 'supervisor-override', label: '6. Supervisor Override' },
-              { id: 'stowage-sealing', label: '7. Bolt Seal' },
-              { id: 'gate-pass', label: '8. Gate Pass' },
-            ].map((tab) => (
+            {LOADER_STEPS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setScreen(tab.id as LoaderScreen)}
@@ -103,7 +111,7 @@ export default function LoaderKioskPage() {
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                {tab.label}
+                {tab.stepNum}. {tab.label}
               </button>
             ))}
           </div>
@@ -203,6 +211,48 @@ export default function LoaderKioskPage() {
               <span className="text-xs font-bold text-cyan-400 mt-0.5 flex items-center gap-1">
                 ❄️ +3.5°C Active
               </span>
+            </div>
+          </div>
+
+          {/* Persistent Step Progress Bar across all 8 screens */}
+          <div className="mt-4 pt-3.5 border-t border-[#1E293B]">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-extrabold text-[11px] border border-blue-500/30">
+                  Step {currentStep.stepNum} of 8
+                </span>
+                <span className="font-extrabold text-white text-sm">
+                  {currentStep.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-400 text-xs">
+                <span>{Math.round(((currentStepIdx + 1) / 8) * 100)}% Complete</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-emerald-400 font-semibold">{8 - (currentStepIdx + 1)} steps left</span>
+              </div>
+            </div>
+
+            {/* Stepper Dots / Bars */}
+            <div className="grid grid-cols-8 gap-1.5">
+              {LOADER_STEPS.map((s, idx) => {
+                const isPast = idx < currentStepIdx;
+                const isCurrent = idx === currentStepIdx;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setScreen(s.id)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-blue-500 shadow-md shadow-blue-500/50 ring-2 ring-blue-400/40'
+                        : isPast
+                        ? 'bg-emerald-500 hover:bg-emerald-400'
+                        : 'bg-slate-700/80 hover:bg-slate-600'
+                    }`}
+                    title={`Step ${s.stepNum}: ${s.label}`}
+                  />
+                );
+              })}
             </div>
           </div>
         </header>
@@ -1065,6 +1115,56 @@ export default function LoaderKioskPage() {
               </div>
             </div>
           )}
+
+          {/* Consistent Workflow Navigation Footer on every screen */}
+          <footer className="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Back to Previous Step */}
+            <div>
+              {prevStep ? (
+                <button
+                  type="button"
+                  onClick={() => setScreen(prevStep.id)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-100 font-bold text-xs flex items-center gap-2 transition-all shadow-xs active:scale-[0.98]"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Back to Step {prevStep.stepNum}: {prevStep.label}</span>
+                </button>
+              ) : (
+                <span className="text-xs text-slate-400 font-semibold italic">
+                  Step 1: Start of Shift
+                </span>
+              )}
+            </div>
+
+            {/* Current Step Pill */}
+            <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+              <span>Step {currentStep.stepNum} of 8: <strong className="text-slate-900">{currentStep.label}</strong></span>
+            </div>
+
+            {/* Next Step Primary Button */}
+            <div>
+              {nextStep ? (
+                <button
+                  type="button"
+                  onClick={() => celebrateAndProceed(nextStep.id)}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-2 transition-all shadow-md shadow-blue-500/20 active:scale-[0.98]"
+                >
+                  <span>Proceed to Step {nextStep.stepNum}: {nextStep.label}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => celebrateAndProceed('dock-master')}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-2 transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98]"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Complete Dispatch & Return to Dock</span>
+                </button>
+              )}
+            </div>
+          </footer>
         </div>
       </div>
 
