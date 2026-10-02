@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   Wifi,
   Database,
+  Truck,
+  LogOut,
+  Check,
 } from 'lucide-react';
 import { offlineDb, LocalOfflineAction } from '@/lib/offline-store';
 
@@ -70,7 +73,6 @@ export default function OfflineSyncPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Mark all as synced in local IndexedDB
         for (const act of unsynced) {
           if (act.id) {
             await offlineDb.offlineActions.update(act.id, { synced: true });
@@ -97,152 +99,190 @@ export default function OfflineSyncPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('waypoint_token');
+    localStorage.removeItem('waypoint_user');
+    router.push('/');
+  };
+
   const pendingCount = actions.filter((a) => !a.synced).length;
 
   return (
-    <div className="min-h-screen bg-[#070D18] text-slate-100 flex justify-center">
-      <div className="w-full max-w-md bg-[#0A1222] min-h-screen flex flex-col border-x border-slate-800 shadow-2xl relative">
-        {/* Header */}
-        <header className="p-4 bg-[#0E172A] border-b border-slate-800 flex items-center justify-between sticky top-0 z-20">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col">
+      {/* Top Application Bar */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/driver"
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-all flex items-center gap-1.5 text-xs font-bold"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Route</span>
             </Link>
             <div>
-              <h1 className="text-base font-black text-white">
+              <h1 className="text-base font-black text-slate-900 leading-tight">
                 Offline Reconciliation Center
               </h1>
-              <p className="text-[11px] text-slate-400">
-                IndexedDB Queue • Automated Conflict Resolution
+              <p className="text-[11px] text-slate-500 hidden sm:block">
+                Browser IndexedDB Queue • Automated Conflict Resolution
               </p>
             </div>
           </div>
 
-          <button
-            onClick={loadOfflineActions}
-            className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </header>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={loadOfflineActions}
+              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-all"
+              title="Refresh Queue"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
 
-        {/* Content */}
-        <main className="flex-1 p-4 space-y-4">
-          {/* Status Card */}
-          <div className="p-4 rounded-2xl bg-[#0F1B30] border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
-                <Database className="w-3.5 h-3.5 text-blue-400" />
-                Local Storage Buffer
-              </span>
-              <span
-                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  pendingCount > 0
-                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                }`}
-              >
-                {pendingCount > 0 ? `${pendingCount} PENDING SYNC` : 'UP TO DATE'}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              When working in field dead-zones, store signatures and delivery timestamps are securely buffered in browser IndexedDB.
-            </p>
-
-            {pendingCount > 0 && (
-              <button
-                type="button"
-                onClick={handleSyncNow}
-                disabled={isSyncing}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                {isSyncing ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <CloudUpload className="w-4 h-4" />
-                    <span>Synchronize {pendingCount} Pending Events Now</span>
-                  </>
-                )}
-              </button>
-            )}
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-slate-200"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
+        </div>
+      </nav>
 
-          {/* Sync Report Success Banner */}
-          {syncReport && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs space-y-2">
-              <div className="font-bold flex items-center gap-1.5 text-emerald-400">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Reconciliation Completed Successfully</span>
-              </div>
-              <p>{syncReport.message}</p>
-              <div className="text-[11px] text-slate-400">
-                Synced at: {new Date(syncReport.syncedAt).toLocaleTimeString()}
-              </div>
-            </div>
-          )}
-
-          {/* Offline Actions List */}
-          <div className="space-y-2.5">
-            <h2 className="text-xs uppercase tracking-wider text-slate-400 font-semibold px-1">
-              Recorded Offline Delivery Events
-            </h2>
-
-            {loading ? (
-              <div className="text-center p-8 text-xs text-slate-500">
-                Reading IndexedDB...
-              </div>
-            ) : actions.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
-                <ShieldCheck className="w-8 h-8 text-slate-600 mx-auto" />
-                <p className="font-semibold text-slate-300">No pending offline events</p>
-                <p className="text-[11px] text-slate-500">
-                  Switch the Driver to &ldquo;Simulate Offline&rdquo; on the home screen to test offline delivery capture.
-                </p>
-              </div>
-            ) : (
-              actions.map((act) => (
-                <div
-                  key={act.actionId}
-                  className="p-3.5 rounded-xl border border-slate-800 bg-[#0E172A] space-y-2 text-xs"
+      {/* Main Responsive Grid */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Local Storage Buffer & Sync Trigger (5 cols) */}
+          <div className="lg:col-span-5 space-y-5">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-wider text-slate-600 font-extrabold flex items-center gap-1.5">
+                  <Database className="w-4 h-4 text-blue-600" />
+                  Local IndexedDB Storage
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    pendingCount > 0
+                      ? 'bg-amber-50 text-amber-700 border-amber-300'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <span>{act.outletId}</span>
-                      <span className="text-[10px] text-slate-400 font-normal">
-                        (Stop #{act.stopId})
-                      </span>
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        act.synced
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      }`}
-                    >
-                      {act.synced ? 'Synchronized' : 'Queued Offline'}
-                    </span>
-                  </div>
+                  {pendingCount > 0 ? `${pendingCount} PENDING SYNC` : 'BUFFER SYNCED'}
+                </span>
+              </div>
 
-                  <div className="text-[11px] text-slate-400">
-                    Recorded: {new Date(act.offlineTimestamp).toLocaleTimeString()}
-                  </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                When vehicles enter remote mountain corridors without 4G cellular signal, all delivery timestamps, customer signatures, and discrepancy notes are written to the browser&apos;s persistent local storage.
+              </p>
 
-                  {act.discrepancyNote && (
-                    <div className="p-2 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">
-                      Discrepancy: {act.discrepancyNote}
-                    </div>
-                  )}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-slate-200">
+                  <span className="text-slate-500">Buffered Actions</span>
+                  <strong className="text-slate-900">{actions.length} Total</strong>
                 </div>
-              ))
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Awaiting Server Commit</span>
+                  <strong className="text-amber-600 font-bold">{pendingCount} Records</strong>
+                </div>
+              </div>
+
+              {pendingCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSyncNow}
+                  disabled={isSyncing}
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-sm shadow-lg shadow-blue-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {isSyncing ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <CloudUpload className="w-4 h-4" />
+                      <span>Synchronize {pendingCount} Pending Events Now</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Reconciliation Report */}
+            {syncReport && (
+              <div className="p-5 rounded-3xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs space-y-2 shadow-xs">
+                <div className="font-extrabold flex items-center gap-1.5 text-emerald-700 text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Cloud Reconciliation Completed</span>
+                </div>
+                <p className="leading-relaxed">{syncReport.message}</p>
+                <div className="text-[11px] text-emerald-600 font-mono">
+                  Synced at: {new Date(syncReport.syncedAt).toLocaleTimeString()}
+                </div>
+              </div>
             )}
           </div>
-        </main>
-      </div>
+
+          {/* Right Column: Recorded Offline Events List (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+              <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+                Recorded Offline Delivery Audit Queue
+              </h2>
+
+              {loading ? (
+                <div className="text-center p-8 text-xs text-slate-500">
+                  Reading local IndexedDB...
+                </div>
+              ) : actions.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 space-y-2">
+                  <ShieldCheck className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="font-bold text-slate-700">All delivery records are synchronized</p>
+                  <p className="text-[11px] max-w-sm mx-auto">
+                    Switch the driver to &ldquo;Simulate Connection Loss&rdquo; on any stop to test offline delivery recording.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {actions.map((act) => (
+                    <div
+                      key={act.actionId}
+                      className="p-4 rounded-2xl border border-slate-200 bg-white space-y-2 text-xs shadow-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                          <span>{act.outletId}</span>
+                          <span className="text-xs font-normal text-slate-500">
+                            (Stop #{act.stopId})
+                          </span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                            act.synced
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                              : 'bg-amber-50 text-amber-700 border-amber-300'
+                          }`}
+                        >
+                          {act.synced ? 'Synchronized to Cloud' : 'Buffered Offline'}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 font-mono">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        <span>Recorded at {new Date(act.offlineTimestamp).toLocaleTimeString()}</span>
+                      </div>
+
+                      {act.discrepancyNote && (
+                        <div className="p-2.5 rounded-xl bg-slate-50 text-slate-700 text-xs border border-slate-200">
+                          Discrepancy Note: <strong>{act.discrepancyNote}</strong>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
