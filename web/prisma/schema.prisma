@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Outlet {
+  outlet_id          String     @id @map("outlet_id") @db.VarChar(20)
+  brand              String     @db.VarChar(50)
+  district           String     @db.VarChar(50)
+  depot              String     @db.VarChar(50)
+  dock_type          String     @map("dock_type") @db.VarChar(50)
+  parking_constraint String?    @map("parking_constraint") @db.VarChar(50)
+  mall_window        String?    @map("mall_window") @db.VarChar(50)
+  window_open_time   String     @map("window_open_time") @db.VarChar(10)
+  window_close_time  String     @map("window_close_time") @db.VarChar(10)
+
+  orders             Order[]
+  trip_stops         TripStop[]
+
+  @@map("outlets")
+}
+
+model Vehicle {
+  vehicle_id          String   @id @map("vehicle_id") @db.VarChar(20)
+  type                String   @db.VarChar(20)
+  temp                String   @db.VarChar(20)
+  weight_cap_kg       Decimal  @map("weight_cap_kg") @db.Decimal
+  volume_cap_m3       Decimal  @map("volume_cap_m3") @db.Decimal
+  fuel_type           String   @map("fuel_type") @db.VarChar(20)
+  km_per_l            Decimal  @map("km_per_l") @db.Decimal
+  weekly_fuel_quota_l Decimal  @map("weekly_fuel_quota_l") @db.Decimal
+  depot               String   @db.VarChar(50)
+
+  trips               Trip[]
+
+  @@map("vehicles")
+}
+
+model ServiceAllowance {
+  brand                 String @db.VarChar(50)
+  dock_type             String @map("dock_type") @db.VarChar(50)
+  service_allowance_min Int    @map("service_allowance_min")
+
+  @@id([brand, dock_type])
+  @@map("service_allowance")
+}
+
+model DistrictTravel {
+  district                       String  @db.VarChar(50)
+  depot                          String  @db.VarChar(50)
+  road_class                     String  @map("road_class") @db.VarChar(50)
+  free_flow_kmh                  Decimal @map("free_flow_kmh") @db.Decimal
+  depot_to_district_km           Decimal @map("depot_to_district_km") @db.Decimal
+  depot_to_district_freeflow_min Decimal @map("depot_to_district_freeflow_min") @db.Decimal
+  inter_stop_km                  Decimal @map("inter_stop_km") @db.Decimal
+  inter_stop_freeflow_min        Decimal @map("inter_stop_freeflow_min") @db.Decimal
+
+  @@id([district, depot])
+  @@map("district_travel")
+}
+
+model User {
+  id             Int    @id @default(autoincrement())
+  email          String @unique @db.VarChar(100)
+  password_hash  String @map("password_hash") @db.VarChar(255)
+  name           String @db.VarChar(100)
+  role           String @db.VarChar(50) // DISPATCHER, STORE_MANAGER, LOADER, DRIVER
+  assigned_scope String @map("assigned_scope") @db.VarChar(100)
+
+  @@map("users")
+}
+
+model Order {
+  order_id         String    @id @map("order_id") @db.VarChar(50)
+  outlet_id        String?   @map("outlet_id") @db.VarChar(20)
+  outlet           Outlet?   @relation(fields: [outlet_id], references: [outlet_id])
+  delivery_date    DateTime  @map("delivery_date") @db.Date
+  brand            String    @db.VarChar(50)
+  weight_kg        Decimal   @map("weight_kg") @db.Decimal
+  volume_m3        Decimal   @map("volume_m3") @db.Decimal
+  crate_count      Int       @map("crate_count")
+  requires_chilled Boolean   @default(false) @map("requires_chilled")
+  status           String    @default("CONFIRMED") @db.VarChar(50) // DRAFT, CONFIRMED, PLANNED, DEFERRED, DELIVERED
+  created_at       DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("orders")
+}
+
+model Trip {
+  trip_id            String     @id @map("trip_id") @db.VarChar(50)
+  vehicle_id         String?    @map("vehicle_id") @db.VarChar(20)
+  vehicle            Vehicle?   @relation(fields: [vehicle_id], references: [vehicle_id])
+  driver_name        String     @map("driver_name") @db.VarChar(100)
+  depot              String     @db.VarChar(50)
+  trip_number        Int        @map("trip_number")
+  delivery_date      DateTime   @map("delivery_date") @db.Date
+  total_weight_kg    Decimal    @map("total_weight_kg") @db.Decimal
+  total_volume_m3    Decimal    @map("total_volume_m3") @db.Decimal
+  total_crates       Int        @map("total_crates")
+  status             String     @default("PLANNED") @db.VarChar(50) // PLANNED, LOADING, ON_ROUTE, COMPLETED, DEGRADED_OFFLINE
+  departure_time     String?    @map("departure_time") @db.VarChar(10)
+  last_sync_time     DateTime?  @map("last_sync_time") @db.Timestamp(6)
+  is_telemetry_stale Boolean?   @default(false) @map("is_telemetry_stale")
+
+  stops              TripStop[]
+
+  @@map("trips")
+}
+
+model TripStop {
+  id                 Int       @id @default(autoincrement())
+  trip_id            String?   @map("trip_id") @db.VarChar(50)
+  trip               Trip?     @relation(fields: [trip_id], references: [trip_id])
+  outlet_id          String?   @map("outlet_id") @db.VarChar(20)
+  outlet             Outlet?   @relation(fields: [outlet_id], references: [outlet_id])
+  stop_sequence      Int       @map("stop_sequence")
+  eta_start          String    @map("eta_start") @db.VarChar(10)
+  eta_end            String    @map("eta_end") @db.VarChar(10)
+  status             String    @default("PLANNED") @db.VarChar(50) // PLANNED, DELIVERED, FAILED
+  discrepancy_note   String?   @map("discrepancy_note")
+  signature_data     String?   @map("signature_data")
+  is_offline_record  Boolean?  @default(false) @map("is_offline_record")
+  completed_at       DateTime? @map("completed_at") @db.Timestamp(6)
+
+  @@map("trip_stops")
+}
