@@ -20,33 +20,23 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backend & Seed Service
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: waypoint_api
-  #   environment:
-  #     DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-waypoint_db}
-  #     PORT: 8000
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-
-  # Frontend Web Application
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: waypoint_web
-  #   environment:
-  #     NEXT_PUBLIC_API_URL: http://localhost:8000
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - backend
+  # Unified Web Platform & REST API (Next.js 14)
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: waypoint_web
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-waypoint_db}
+      JWT_SECRET: ${JWT_SECRET:-supersecret_waypoint_jwt_key_2026}
+      PORT: 3000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
