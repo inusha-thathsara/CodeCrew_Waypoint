@@ -80,59 +80,61 @@ export default function LoaderKioskPage() {
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col items-center py-6 px-4">
-      {/* Top Controls: Screen Switcher + Desktop/Tablet Viewport Toggle */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
-        <div className="flex flex-wrap items-center justify-center gap-1.5 bg-[#161E2E] border border-[#2E3A52] p-1.5 rounded-full shadow-lg">
-          {[
-            { id: 'dock-master', label: '1. Dock Master' },
-            { id: 'pre-cooling-inspection', label: '2. Inspection' },
-            { id: 'lifo-staging', label: '3. LIFO Staging' },
-            { id: 'rf-scanner', label: '4. Barcode Scan' },
-            { id: 'shortfall-exception', label: '5. Shortfall Alert' },
-            { id: 'supervisor-override', label: '6. Supervisor Override' },
-            { id: 'stowage-sealing', label: '7. Bolt Seal' },
-            { id: 'gate-pass', label: '8. Gate Pass' },
-          ].map((tab) => (
+      {/* Dev-only controls: completely removed on production */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 bg-[#161E2E] border border-[#2E3A52] p-1.5 rounded-full shadow-lg">
+            {[
+              { id: 'dock-master', label: '1. Dock Master' },
+              { id: 'pre-cooling-inspection', label: '2. Inspection' },
+              { id: 'lifo-staging', label: '3. LIFO Staging' },
+              { id: 'rf-scanner', label: '4. Barcode Scan' },
+              { id: 'shortfall-exception', label: '5. Shortfall Alert' },
+              { id: 'supervisor-override', label: '6. Supervisor Override' },
+              { id: 'stowage-sealing', label: '7. Bolt Seal' },
+              { id: 'gate-pass', label: '8. Gate Pass' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setScreen(tab.id as LoaderScreen)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  screen === tab.id
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Viewport switch: Responsive vs Tablet */}
+          <div className="flex items-center bg-[#161E2E] border border-[#2E3A52] p-1 rounded-xl shadow-xs">
             <button
-              key={tab.id}
-              onClick={() => setScreen(tab.id as LoaderScreen)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                screen === tab.id
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              type="button"
+              onClick={() => setViewportMode('responsive')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewportMode === 'responsive'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              {tab.label}
+              💻 Web Responsive
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setViewportMode('tablet')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                viewportMode === 'tablet'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              📟 Tablet Frame (768px)
+            </button>
+          </div>
         </div>
-
-        {/* Viewport switch: Responsive vs Tablet */}
-        <div className="flex items-center bg-[#161E2E] border border-[#2E3A52] p-1 rounded-xl shadow-xs">
-          <button
-            type="button"
-            onClick={() => setViewportMode('responsive')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewportMode === 'responsive'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            💻 Web Responsive
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewportMode('tablet')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewportMode === 'tablet'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            📟 Tablet Frame (768px)
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Rugged Tablet Kiosk Frame - Expands to max-w-6xl on desktop in Responsive mode */}
       <div
