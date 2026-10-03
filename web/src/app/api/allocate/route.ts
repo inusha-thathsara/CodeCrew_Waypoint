@@ -23,31 +23,46 @@ export async function POST(req: NextRequest) {
     let vehicles: VehicleInput[] = [];
 
     try {
-      const dbOrders = await db.order.findMany({
-        where: {
-          delivery_date: new Date(deliveryDate),
-          status: { in: ['CONFIRMED', 'PLANNED'] },
-        },
-        include: {
-          outlet: true,
-        },
-      });
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('DB_TIMEOUT')), 600)
+      );
 
-      orders = dbOrders.map((o) => ({
-        order_id: o.order_id,
-        outlet_id: o.outlet_id || '',
-        delivery_date: deliveryDate,
-        brand: o.brand,
-        weight_kg: Number(o.weight_kg),
-        volume_m3: Number(o.volume_m3),
-        crate_count: o.crate_count,
-        requires_chilled: o.requires_chilled,
-        status: o.status,
-        outlet: o.outlet || undefined,
-      }));
+      const dbOrders = (await Promise.race([
+        db.order.findMany({
+          where: {
+            delivery_date: new Date(deliveryDate),
+            status: { in: ['CONFIRMED', 'PLANNED'] },
+          },
+          include: {
+            outlet: true,
+          },
+        }),
+        timeoutPromise,
+      ])) as any[];
 
-      const dbVehicles = await db.vehicle.findMany();
-      if (dbVehicles.length > 0) {
+      if (dbOrders && dbOrders.length > 0) {
+        orders = dbOrders.map((o) => ({
+          order_id: o.order_id,
+          outlet_id: o.outlet_id || '',
+          delivery_date: deliveryDate,
+          brand: o.brand,
+          weight_kg: Number(o.weight_kg),
+          volume_m3: Number(o.volume_m3),
+          crate_count: o.crate_count,
+          requires_chilled: o.requires_chilled,
+          status: o.status,
+          outlet: o.outlet || undefined,
+        }));
+      }
+
+      const dbVehicles = (await Promise.race([
+        db.vehicle.findMany(),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('DB_TIMEOUT')), 400)
+        ),
+      ])) as any[];
+
+      if (dbVehicles && dbVehicles.length > 0) {
         vehicles = dbVehicles.map((v) => ({
           vehicle_id: v.vehicle_id,
           type: v.type,
@@ -61,7 +76,7 @@ export async function POST(req: NextRequest) {
         }));
       }
     } catch (dbErr) {
-      console.warn('DB read failed during allocation, using mock dataset:', dbErr);
+      console.warn('DB read failed or timed out during allocation, using mock dataset:', dbErr);
     }
 
     if (vehicles.length === 0) {

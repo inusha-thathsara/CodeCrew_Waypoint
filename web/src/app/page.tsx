@@ -95,9 +95,10 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('waypoint_token', data.token);
         localStorage.setItem('waypoint_user', JSON.stringify(data.user));
+        window.location.href = data.redirectUrl;
+      } else {
+        router.push(data.redirectUrl);
       }
-
-      router.push(data.redirectUrl);
     } catch (err: any) {
       setError(err?.message || 'Failed to authenticate');
       setIsLoading(false);
