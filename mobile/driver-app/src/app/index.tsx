@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import {
   Pressable,
@@ -20,25 +21,93 @@ type Screen =
   | 'sync'
   | 'settings';
 
-const stops = [
-  { id: 'OUT077', name: 'Kandy Fresh', window: '5:00 AM–7:30 AM', status: 'Next' },
-  { id: 'OUT079', name: 'Kandy', window: '4:00 AM–7:45 AM', status: 'Upcoming' },
-  { id: 'OUT080', name: 'Kandy', window: '5:30 AM–8:00 AM', status: 'Upcoming' },
-  { id: 'Pending', name: 'Stop 4', window: 'Details to confirm', status: 'Upcoming' },
-  { id: 'Pending', name: 'Stop 5', window: 'Details to confirm', status: 'Upcoming' },
+type DriverStop = {
+  id: string;
+  name: string;
+  window: string;
+  eta: string;
+  orderId?: string;
+  status: 'Next' | 'Upcoming' | 'Delivered';
+};
+
+const initialStops: DriverStop[] = [
+  {
+    id: 'OUT077',
+    name: 'Kandy Fresh',
+    window: '5:00 AM–7:30 AM',
+    eta: '7:12 AM',
+    orderId: 'WF-1043',
+    status: 'Next',
+  },
+  {
+    id: 'OUT079',
+    name: 'Kandy',
+    window: '4:00 AM–7:45 AM',
+    eta: 'Not available',
+    status: 'Upcoming',
+  },
+  {
+    id: 'OUT080',
+    name: 'Kandy',
+    window: '5:30 AM–8:00 AM',
+    eta: 'Not available',
+    status: 'Upcoming',
+  },
 ];
 
 export default function DriverApp() {
   const [screen, setScreen] = useState<Screen>('route');
+  const [stops, setStops] = useState(initialStops);
+  const [selectedStop, setSelectedStop] = useState<DriverStop>(initialStops[0]);
   const [recipient, setRecipient] = useState('');
-  const [deliveryRecorded, setDeliveryRecorded] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  const isTabScreen =
-    screen === 'route' || screen === 'stops' || screen === 'settings';
+  const nextStopId = stops.find((stop) => stop.status !== 'Delivered')?.id;
+
+  function openStop(stop: DriverStop) {
+    setSelectedStop(stop);
+    setScreen('details');
+  }
 
   function openPod() {
-    setDeliveryRecorded(false);
+    setRecipient('');
+    setFormError('');
     setScreen('pod');
+  }
+
+  function confirmDelivery() {
+    if (!recipient.trim()) {
+      setFormError('Enter the receiver’s name before confirming.');
+      return;
+    }
+
+    setStops((currentStops) =>
+      currentStops.map((stop) =>
+        stop.id === selectedStop.id
+          ? { ...stop, status: 'Delivered' }
+          : stop,
+      ),
+    );
+
+    setSelectedStop((currentStop) => ({
+      ...currentStop,
+      status: 'Delivered',
+    }));
+
+    setScreen('completed');
+  }
+
+  function goToNextStop() {
+    const nextStop = stops.find(
+      (stop) => stop.id !== selectedStop.id && stop.status !== 'Delivered',
+    );
+
+    if (nextStop) {
+      setSelectedStop(nextStop);
+      setScreen('details');
+    } else {
+      setScreen('stops');
+    }
   }
 
   return (
@@ -56,13 +125,19 @@ export default function DriverApp() {
                 <InfoRow label="Vehicle Type" value="Refrigerated Van" />
                 <InfoRow label="Starting Depot" value="Kandy Depot" />
                 <InfoRow label="Departure" value="4:45 AM" />
-                <InfoRow label="Stops" value="5" />
-                <InfoRow label="Delivery Window" value="Before 8:00 AM" blue />
+                <InfoRow label="Stops" value={String(stops.length)} />
+                <InfoRow
+                  label="Delivery Window"
+                  value="Before 8:00 AM"
+                  blue
+                />
               </Card>
 
               <View style={styles.warning}>
                 <Text style={styles.warningTitle}>⚠ Loading Shortfall</Text>
-                <Text style={styles.warningText}>Milk · 18 planned → 15 available</Text>
+                <Text style={styles.warningText}>
+                  Milk · 18 planned → 15 available
+                </Text>
                 <Text style={styles.warningText}>3 units unavailable</Text>
               </View>
 
@@ -83,36 +158,64 @@ export default function DriverApp() {
                 <Text style={styles.muted}>🚉 Kandy Depot</Text>
               </View>
 
-              {stops.map((stop, index) => (
-                <View key={`${stop.id}-${index}`}>
-                  <Text style={styles.downArrow}>↓</Text>
-                  <Card>
-                    <View style={styles.stopHeading}>
-                      <Text style={styles.stopNumber}>{index + 1}</Text>
-                      <Text style={styles.cardTitle}>
-                        {stop.id}: {stop.name}
-                      </Text>
-                      <Text style={index === 0 ? styles.nextTag : styles.tag}>
-                        {index === 0 ? '🟢 Next' : 'Upcoming'}
-                      </Text>
-                    </View>
-                    <InfoRow label="Delivery Window" value={stop.window} />
-                    <SecondaryButton
-                      title="Open Stop"
-                      onPress={() => setScreen('details')}
-                    />
-                  </Card>
-                </View>
-              ))}
+              {stops.map((stop, index) => {
+                const isNext =
+                  stop.id === nextStopId && stop.status !== 'Delivered';
+
+                return (
+                  <View key={stop.id}>
+                    <Text style={styles.downArrow}>↓</Text>
+                    <Card>
+                      <View style={styles.stopHeading}>
+                        <Text style={styles.stopNumber}>{index + 1}</Text>
+                        <Text style={styles.stopName}>
+                          {stop.id}: {stop.name}
+                        </Text>
+                        <Text
+                          style={
+                            stop.status === 'Delivered'
+                              ? styles.deliveredTag
+                              : isNext
+                                ? styles.nextTag
+                                : styles.tag
+                          }
+                        >
+                          {stop.status === 'Delivered'
+                            ? 'Delivered'
+                            : isNext
+                              ? '🟢 Next'
+                              : 'Upcoming'}
+                        </Text>
+                      </View>
+
+                      <InfoRow
+                        label="Delivery Window"
+                        value={stop.window}
+                      />
+
+                      <SecondaryButton
+                        title="Open Stop"
+                        onPress={() => openStop(stop)}
+                      />
+                    </Card>
+                  </View>
+                );
+              })}
             </>
           )}
 
           {screen === 'details' && (
             <>
               <Pressable onPress={() => setScreen('stops')}>
-                <Text style={styles.backTitle}>← OUT077: Kandy Fresh</Text>
+                <Text style={styles.backTitle}>
+                  ← {selectedStop.id}: {selectedStop.name}
+                </Text>
               </Pressable>
-              <Text style={styles.subheading}>Stop 1 of 3</Text>
+
+              <Text style={styles.subheading}>
+                Stop {stops.findIndex((stop) => stop.id === selectedStop.id) + 1}{' '}
+                of {stops.length}
+              </Text>
 
               <SecondaryButton
                 title="📶 Simulate Connection Loss"
@@ -122,37 +225,80 @@ export default function DriverApp() {
 
               <Text style={styles.sectionLabel}>DELIVERY INFORMATION</Text>
               <Card>
-                <InfoRow label="Order" value="WF-1043" />
-                <InfoRow label="Delivery Window" value="3:00 AM–8:00 AM" />
+                <InfoRow
+                  label="Order"
+                  value={selectedStop.orderId ?? 'Not provided'}
+                />
+                <InfoRow label="Delivery Window" value={selectedStop.window} />
                 <InfoRow label="Vehicle" value="VEH057" />
+                <InfoRow label="Status" value={selectedStop.status} />
               </Card>
 
-              <Text style={styles.sectionLabel}>ITEMS</Text>
-              <Card>
-                <TableHeader first="PRODUCT" second="PLANNED" third="AVAILABLE" />
-                <TableRow first="Milk" second="18" third="15" alert />
-                <TableRow first="Yogurt" second="10" third="10" success />
-                <TableRow first="Vegetables" second="8" third="8" success />
-                <TableRow first="Frozen Chicken" second="4 kg" third="4" success />
-              </Card>
+              {selectedStop.id === 'OUT077' ? (
+                <>
+                  <Text style={styles.sectionLabel}>ITEMS · FIGMA SAMPLE</Text>
+                  <Card>
+                    <TableHeader
+                      first="PRODUCT"
+                      second="PLANNED"
+                      third="AVAILABLE"
+                    />
+                    <TableRow first="Milk" second="18" third="15" alert />
+                    <TableRow first="Yogurt" second="10" third="10" success />
+                    <TableRow
+                      first="Vegetables"
+                      second="8"
+                      third="8"
+                      success
+                    />
+                    <TableRow
+                      first="Frozen Chicken"
+                      second="4 kg"
+                      third="4"
+                      success
+                    />
+                  </Card>
 
-              <View style={styles.warning}>
-                <Text style={styles.warningTitle}>⚠ Loading Shortfall</Text>
-                <Text style={styles.warningText}>Milk: 3 units unavailable</Text>
-              </View>
+                  <View style={styles.warning}>
+                    <Text style={styles.warningTitle}>
+                      ⚠ Loading Shortfall
+                    </Text>
+                    <Text style={styles.warningText}>
+                      Milk: 3 units unavailable
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.infoBanner}>
+                  <Text style={styles.muted}>
+                    Item-level order details are not included for this demo stop.
+                  </Text>
+                </View>
+              )}
 
-              <PrimaryButton
-                title="Start En Route"
-                onPress={() => setScreen('enroute')}
-              />
+              {selectedStop.status === 'Delivered' ? (
+                <View style={styles.successBanner}>
+                  <Text style={styles.successText}>
+                    This stop is already marked delivered in the demo.
+                  </Text>
+                </View>
+              ) : (
+                <PrimaryButton
+                  title="Start Route"
+                  onPress={() => setScreen('enroute')}
+                />
+              )}
             </>
           )}
 
           {screen === 'enroute' && (
             <>
               <Pressable onPress={() => setScreen('details')}>
-                <Text style={styles.backTitle}>← OUT077: Kandy Fresh</Text>
+                <Text style={styles.backTitle}>
+                  ← {selectedStop.id}: {selectedStop.name}
+                </Text>
               </Pressable>
+
               <Text style={styles.subheading}>En Route</Text>
 
               <SecondaryButton
@@ -163,8 +309,11 @@ export default function DriverApp() {
 
               <Text style={styles.sectionLabel}>TRIP INFORMATION</Text>
               <Card>
-                <InfoRow label="ETA" value="7:12 AM" blue />
-                <InfoRow label="Delivery Window" value="5:00 AM–7:30 AM" />
+                <InfoRow label="ETA" value={selectedStop.eta} blue />
+                <InfoRow
+                  label="Delivery Window"
+                  value={selectedStop.window}
+                />
               </Card>
 
               <Text style={styles.sectionLabel}>ROUTE</Text>
@@ -173,7 +322,9 @@ export default function DriverApp() {
                 <Text style={styles.routeMapText}>↓</Text>
                 <Text style={styles.routeMapText}>🚚 Your vehicle</Text>
                 <Text style={styles.routeMapText}>↓</Text>
-                <Text style={styles.routeDestination}>📍 OUT077: Kandy Fresh</Text>
+                <Text style={styles.routeDestination}>
+                  📍 {selectedStop.id}: {selectedStop.name}
+                </Text>
               </View>
 
               <PrimaryButton
@@ -196,91 +347,127 @@ export default function DriverApp() {
               />
 
               <Card>
-                <InfoRow label="Store" value="OUT077: Kandy Fresh" />
-                <InfoRow label="Order" value="WF-1043" />
+                <InfoRow
+                  label="Store"
+                  value={`${selectedStop.id}: ${selectedStop.name}`}
+                />
+                <InfoRow
+                  label="Order"
+                  value={selectedStop.orderId ?? 'Not provided'}
+                />
               </Card>
 
-              <Text style={styles.sectionLabel}>DELIVERY QUANTITY</Text>
-              <Card>
-                <TableHeader first="PRODUCT" second="EXPECTED" third="DELIVERED" />
-                <TableRow first="Milk" second="18" third="15 ⚠" alert />
-                <TableRow first="Yogurt" second="10" third="10" success />
-                <TableRow first="Vegetables" second="8" third="8" success />
-                <TableRow first="Chilled Chicken" second="4" third="4" success />
-              </Card>
+              {selectedStop.id === 'OUT077' ? (
+                <>
+                  <Text style={styles.sectionLabel}>
+                    DELIVERY QUANTITY · FIGMA SAMPLE
+                  </Text>
+                  <Card>
+                    <TableHeader
+                      first="PRODUCT"
+                      second="EXPECTED"
+                      third="DELIVERED"
+                    />
+                    <TableRow first="Milk" second="18" third="15 ⚠" alert />
+                    <TableRow first="Yogurt" second="10" third="10" success />
+                    <TableRow
+                      first="Vegetables"
+                      second="8"
+                      third="8"
+                      success
+                    />
+                    <TableRow
+                      first="Chilled Chicken"
+                      second="4"
+                      third="4"
+                      success
+                    />
+                  </Card>
 
-              <View style={styles.warning}>
-                <Text style={styles.warningTitle}>⚠ 3 units of Milk short</Text>
-              </View>
+                  <View style={styles.warning}>
+                    <Text style={styles.warningTitle}>
+                      ⚠ 3 units of Milk short
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.infoBanner}>
+                  <Text style={styles.muted}>
+                    Enter the confirmed item quantities when they are available.
+                  </Text>
+                </View>
+              )}
 
               <Text style={styles.sectionLabel}>RECEIVER INFORMATION</Text>
               <Card>
                 <InfoRow label="Receiver" value="Store Manager" />
+
+                <Text style={styles.inputLabel}>Receiver name</Text>
                 <TextInput
                   style={styles.input}
                   value={recipient}
-                  onChangeText={setRecipient}
+                  onChangeText={(value) => {
+                    setRecipient(value);
+                    setFormError('');
+                  }}
                   placeholder="Confirm receiver name"
                 />
-                <Text style={styles.inputLabel}>Signature / Proof of Delivery</Text>
+
+                <Text style={styles.inputLabel}>
+                  Signature / Proof of Delivery
+                </Text>
                 <View style={styles.signatureBox}>
-                  <Text style={styles.muted}>Signature area</Text>
+                  <Text style={styles.muted}>
+                    Signature area · visual placeholder
+                  </Text>
                 </View>
               </Card>
 
-              {deliveryRecorded && (
-                <View style={styles.successBanner}>
-                  <Text style={styles.successText}>✓ POD Saved</Text>
-                </View>
+              {!!formError && (
+                <Text style={styles.errorText}>{formError}</Text>
               )}
 
               <PrimaryButton
                 title="Confirm Delivery"
-                onPress={() => {
-                  if (recipient.trim()) {
-                    setDeliveryRecorded(true);
-                    setScreen('completed');
-                  } else {
-                    setDeliveryRecorded(true);
-                  }
-                }}
+                onPress={confirmDelivery}
               />
-              {!recipient.trim() && (
-                <Text style={styles.helper}>
-                  Enter the receiver’s name before confirming.
-                </Text>
-              )}
             </>
           )}
 
           {screen === 'completed' && (
             <>
               <Text style={styles.greeting}>Delivery Completed</Text>
+
               <View style={styles.completedHero}>
                 <Text style={styles.checkmark}>✅</Text>
                 <Text style={styles.cardTitle}>Delivery Completed</Text>
                 <Text style={styles.muted}>
-                  OUT077: Kandy Fresh · Order WF-1043
+                  {selectedStop.id}: {selectedStop.name}
+                  {selectedStop.orderId
+                    ? ` · Order ${selectedStop.orderId}`
+                    : ''}
                 </Text>
               </View>
 
               <Card>
-                <Text style={styles.successText}>✓ POD Saved</Text>
-                <Text style={styles.successText}>✓ Delivery Recorded</Text>
-                <Text style={styles.successText}>✓ Status: Delivered</Text>
+                <Text style={styles.successText}>
+                  ✓ Delivery marked complete in this demo
+                </Text>
+                <Text style={styles.muted}>
+                  This does not save to the backend or capture a signature.
+                </Text>
               </Card>
 
-              <PrimaryButton
-                title="Next Stop"
-                onPress={() => setScreen('stops')}
-              />
+              <PrimaryButton title="Next Stop" onPress={goToNextStop} />
             </>
           )}
 
           {screen === 'offline' && (
             <>
               <Pressable onPress={() => setScreen('pod')}>
-                <Text style={styles.backTitle}>← OUT077: Kandy</Text>
+                <Text style={styles.backTitle}>
+                  ← {selectedStop.id}: {selectedStop.name}
+                </Text>
               </Pressable>
 
               <SecondaryButton
@@ -290,7 +477,9 @@ export default function DriverApp() {
               />
 
               <View style={styles.offlineBanner}>
-                <Text style={styles.offlineTitle}>🔴 No Internet Connection</Text>
+                <Text style={styles.offlineTitle}>
+                  🔴 No Internet Connection
+                </Text>
               </View>
 
               <Card>
@@ -308,13 +497,15 @@ export default function DriverApp() {
                   'Capture POD',
                   'Continue delivery',
                 ].map((item) => (
-                  <Text key={item} style={styles.checklist}>✓  {item}</Text>
+                  <Text key={item} style={styles.checklist}>
+                    ✓ {item}
+                  </Text>
                 ))}
               </Card>
 
               <Text style={styles.offlineNote}>
-                You’re offline. Your delivery records will sync when the
-                connection returns.
+                Offline mode is simulated in this prototype. It does not save
+                delivery records.
               </Text>
 
               <PrimaryButton
@@ -330,21 +521,24 @@ export default function DriverApp() {
 
               <View style={styles.successBanner}>
                 <Text style={styles.successText}>🟢 Connection Restored</Text>
-                <Text style={styles.muted}>Syncing delivery records...</Text>
+                <Text style={styles.muted}>Sync screen prototype</Text>
               </View>
 
               <Text style={styles.sectionLabel}>SYNC PROGRESS</Text>
               <Card>
-                <Text style={styles.checklist}>✓  Delivery recorded</Text>
-                <Text style={styles.checklist}>✓  POD saved</Text>
-                <Text style={styles.checklist}>✓  Delivery status updated</Text>
-                <Text style={styles.checklist}>✓  Route progress updated</Text>
+                <Text style={styles.checklist}>✓ Delivery recorded</Text>
+                <Text style={styles.checklist}>✓ POD saved</Text>
+                <Text style={styles.checklist}>
+                  ✓ Delivery status updated
+                </Text>
+                <Text style={styles.checklist}>
+                  ✓ Route progress updated
+                </Text>
               </Card>
 
               <View style={styles.syncBanner}>
-                <Text style={styles.syncText}>☑ All changes synced</Text>
+                <Text style={styles.syncText}>☑ Demo sync complete</Text>
               </View>
-              <InfoRow label="Last synced" value="6:48 AM" />
 
               <PrimaryButton
                 title="Continue Route"
@@ -360,49 +554,53 @@ export default function DriverApp() {
 
               <Card>
                 <Text style={styles.cardTitle}>K  Kasun</Text>
-                <Text style={styles.muted}>Vehicle VEH057 · Refrigerated Van</Text>
+                <Text style={styles.muted}>
+                  Vehicle VEH057 · Refrigerated Van
+                </Text>
               </Card>
 
               <Text style={styles.sectionLabel}>OPTIONS</Text>
               <Card>
-                {['Trip History', 'App Settings', 'Help & Support', 'Notifications', 'Log Out'].map(
-                  (item) => (
-                    <Pressable key={item} style={styles.optionRow}>
-                      <Text style={styles.optionText}>{item}</Text>
-                      <Text style={styles.muted}>›</Text>
-                    </Pressable>
-                  ),
-                )}
+                {[
+                  'Trip History',
+                  'App Settings',
+                  'Help & Support',
+                  'Notifications',
+                  'Log Out',
+                ].map((item) => (
+                  <Pressable key={item} style={styles.optionRow}>
+                    <Text style={styles.optionText}>{item}</Text>
+                    <Text style={styles.muted}>›</Text>
+                  </Pressable>
+                ))}
               </Card>
             </>
           )}
         </ScrollView>
 
-        {isTabScreen && (
-          <View style={styles.tabBar}>
-            <TabButton
-              label="Route"
-              active={screen === 'route'}
-              onPress={() => setScreen('route')}
-            />
-            <TabButton
-              label="Stops"
-              active={screen === 'stops'}
-              onPress={() => setScreen('stops')}
-            />
-            <TabButton
-              label="Settings"
-              active={screen === 'settings'}
-              onPress={() => setScreen('settings')}
-            />
-          </View>
-        )}
+        <View style={styles.tabBar}>
+          <TabButton
+            label="Route"
+            active={screen === 'route'}
+            onPress={() => setScreen('route')}
+          />
+          <TabButton
+            label="Stops"
+            active={screen === 'stops'}
+            onPress={() => setScreen('stops')}
+          />
+          <TabButton
+            label="Settings"
+            active={screen === 'settings'}
+            onPress={() => setScreen('settings')}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
+function Card({ children }: { children: ReactNode }) {
   return <View style={styles.card}>{children}</View>;
 }
 
@@ -505,7 +703,15 @@ function SecondaryButton({
       ]}
       onPress={onPress}
     >
-      <Text style={danger ? styles.dangerText : success ? styles.successText : styles.blueText}>
+      <Text
+        style={
+          danger
+            ? styles.dangerText
+            : success
+              ? styles.successText
+              : styles.blueText
+        }
+      >
         {title}
       </Text>
     </Pressable>
@@ -526,7 +732,9 @@ function TabButton({
       <Text style={active ? styles.activeTab : styles.inactiveTab}>
         {active ? '●' : '○'}
       </Text>
-      <Text style={active ? styles.activeTabLabel : styles.tabLabel}>{label}</Text>
+      <Text style={active ? styles.activeTabLabel : styles.tabLabel}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -564,8 +772,10 @@ const styles = StyleSheet.create({
   downArrow: { color: '#9AA6B7', textAlign: 'center', fontSize: 20, marginVertical: 4 },
   stopHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stopNumber: { color: '#FFFFFF', backgroundColor: '#1949D2', overflow: 'hidden', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4, fontWeight: '700' },
+  stopName: { flex: 1, color: '#172033', fontSize: 13, fontWeight: '700' },
   nextTag: { color: '#16814B', backgroundColor: '#E3F7EC', overflow: 'hidden', borderRadius: 10, padding: 5, fontSize: 11 },
   tag: { color: '#68738A', backgroundColor: '#F0F2F6', overflow: 'hidden', borderRadius: 10, padding: 5, fontSize: 11 },
+  deliveredTag: { color: '#16814B', backgroundColor: '#E3F7EC', overflow: 'hidden', borderRadius: 10, padding: 5, fontSize: 11 },
   sectionLabel: { color: '#96A2B4', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginTop: 20, marginBottom: 2 },
   tableRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E8EBF1', paddingVertical: 12 },
   tableHeading: { flex: 1, color: '#8491A6', fontSize: 9, fontWeight: '700', textAlign: 'center' },
@@ -580,7 +790,9 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#DCE3EE', borderRadius: 10, padding: 12, marginTop: 10, color: '#172033' },
   inputLabel: { color: '#68738A', fontSize: 12, marginTop: 16 },
   signatureBox: { height: 75, borderWidth: 1, borderStyle: 'dashed', borderColor: '#DCE3EE', borderRadius: 10, marginTop: 8, justifyContent: 'center', alignItems: 'center' },
+  errorText: { color: '#B51F1F', fontSize: 12, marginTop: 10 },
   helper: { color: '#68738A', fontSize: 12, textAlign: 'center', marginTop: 8 },
+  infoBanner: { backgroundColor: '#EDF0F4', padding: 14, borderRadius: 12, marginTop: 14 },
   successBanner: { backgroundColor: '#DFF5E6', borderColor: '#B5E5C3', borderWidth: 1, borderRadius: 14, padding: 15, marginTop: 15 },
   completedHero: { backgroundColor: '#FFFFFF', alignItems: 'center', padding: 24, marginTop: 30 },
   checkmark: { fontSize: 42, marginBottom: 12 },
