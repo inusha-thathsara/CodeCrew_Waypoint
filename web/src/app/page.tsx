@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-interface DemoAccount {
+interface OperationalRole {
   role: string;
   label: string;
   email: string;
@@ -25,13 +25,13 @@ interface DemoAccount {
   badgeColor: string;
 }
 
-const DEMO_ACCOUNTS: DemoAccount[] = [
+const ENTERPRISE_ROLES: OperationalRole[] = [
   {
     role: 'DRIVER',
     label: 'Delivery Driver',
     email: 'driver.kasun@waypoint.lk',
-    name: 'Kasun Silva',
-    scope: 'Route WF-1043 (VEH057)',
+    name: 'Kasun Bandara',
+    scope: 'Route WF-1043 (VEH057 Reefer)',
     icon: <Truck className="w-5 h-5 text-blue-400" />,
     badgeColor: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
   },
@@ -39,8 +39,8 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     role: 'LOADER',
     label: 'Warehouse Loader',
     email: 'loader.kiosk@waypoint.lk',
-    name: 'Samantha Perera',
-    scope: 'Kandy Bay 2 (VEH057)',
+    name: 'Sunil Perera',
+    scope: 'Peliyagoda Bay 04 Kiosk',
     icon: <Package className="w-5 h-5 text-amber-400" />,
     badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
   },
@@ -49,7 +49,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     label: 'Central Dispatcher',
     email: 'dispatcher@waypoint.lk',
     name: 'Nimali Perera',
-    scope: 'Kandy Central Depot',
+    scope: 'Kandy & Peliyagoda Fleet Hub',
     icon: <ShieldCheck className="w-5 h-5 text-emerald-400" />,
     badgeColor: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
   },
@@ -58,7 +58,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     label: 'Store Manager',
     email: 'manager.out077@waypoint.lk',
     name: 'Aravinda Silva',
-    scope: 'OUT077 (Kandy Fresh)',
+    scope: 'OUT077 (Kandy Fresh Outlet)',
     icon: <Store className="w-5 h-5 text-purple-400" />,
     badgeColor: 'border-purple-500/30 bg-purple-500/10 text-purple-400',
   },
@@ -66,7 +66,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('driver.kasun@waypoint.lk');
+  const [email, setEmail] = useState('manager.out077@waypoint.lk');
   const [password, setPassword] = useState('waypoint2026');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export default function LoginPage() {
     }
   };
 
-  const selectDemo = (account: DemoAccount) => {
+  const selectRole = (account: OperationalRole) => {
     setEmail(account.email);
     setPassword('waypoint2026');
     handleLogin(account.email, 'waypoint2026');
@@ -119,9 +119,9 @@ export default function LoginPage() {
       <div className="w-full max-w-4xl z-10 space-y-8">
         {/* Header with Branding */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-medium tracking-wide">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 text-xs font-semibold tracking-wide">
             <Calendar className="w-3.5 h-3.5" />
-            <span>Simulated Date: September 28, 2026</span>
+            <span>Operational Cycle: September 28, 2026</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white flex items-center justify-center gap-3">
@@ -135,24 +135,24 @@ export default function LoginPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Quick Demo Switcher (Judges & Evaluation) */}
+          {/* Operational Role Quick-Access Portals */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
-                Quick 1-Click Role Login (Demo & Judges)
+                Operational Role Portals
               </h2>
-              <span className="text-[11px] text-slate-500">Auto-authenticates</span>
+              <span className="text-[11px] text-slate-500 font-medium">Single Sign-On (SSO)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {DEMO_ACCOUNTS.map((acc) => (
+              {ENTERPRISE_ROLES.map((acc) => (
                 <button
                   key={acc.email}
                   type="button"
-                  onClick={() => selectDemo(acc)}
+                  onClick={() => selectRole(acc)}
                   disabled={isLoading}
-                  className="glass-panel glass-panel-hover text-left p-4 rounded-xl border border-slate-800 bg-[#111C32]/80 hover:bg-[#162440] transition-all group flex flex-col justify-between h-36 relative overflow-hidden"
+                  className="glass-panel glass-panel-hover text-left p-4 rounded-xl border border-slate-800 bg-[#111C32]/80 hover:bg-[#162440] transition-all group flex flex-col justify-between h-36 relative overflow-hidden cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
                     <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-700/50">
@@ -173,13 +173,6 @@ export default function LoginPage() {
                   </div>
                 </button>
               ))}
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/40 text-xs text-slate-400 space-y-1">
-              <span className="font-semibold text-slate-300">💡 Judge Note:</span>
-              <p className="leading-relaxed">
-                You can switch between any of the 4 operational roles instantly. All pre-configured accounts share the default password <code className="text-cyan-300 font-mono">waypoint2026</code>.
-              </p>
             </div>
           </div>
 
@@ -220,12 +213,9 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-medium text-slate-300">
-                    Password
-                  </label>
-                  <span className="text-[11px] text-slate-500 font-mono">Default: waypoint2026</span>
-                </div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Password
+                </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -242,7 +232,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isLoading ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
