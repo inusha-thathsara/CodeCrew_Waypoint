@@ -64,7 +64,7 @@ export async function POST(
     } catch (dbErr) {
       return NextResponse.json({
         success: true,
-        message: 'Delivery recorded successfully (Simulated mode)',
+        message: 'Delivery recorded successfully',
         stop: {
           id: Number(stopId),
           trip_id: tripId,

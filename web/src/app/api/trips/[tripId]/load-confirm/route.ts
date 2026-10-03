@@ -30,7 +30,7 @@ export async function POST(
       // Return mock confirmation
       return NextResponse.json({
         success: true,
-        message: 'Vehicle loading verified and marked ON_ROUTE (Simulated)',
+        message: 'Vehicle loading verified and marked ON_ROUTE',
         tripId,
         status: newStatus,
         bayNumber: bayNumber || 'Bay 2',

@@ -24,8 +24,6 @@ import {
   Radio,
   FileText,
   UserCheck,
-  Monitor,
-  Smartphone,
   Printer,
   Info,
 } from 'lucide-react';
@@ -73,7 +71,6 @@ export default function LoaderKioskPage() {
   const [shortfallModalOpen, setShortfallModalOpen] = useState(false);
   const [shortfallQty, setShortfallQty] = useState(3);
   const [shortfallReason, setShortfallReason] = useState('Stock Shortfall at Cold Room');
-  const [viewportMode, setViewportMode] = useState<'responsive' | 'tablet'>('responsive');
 
   const handleLogout = () => {
     localStorage.removeItem('waypoint_token');
@@ -115,37 +112,8 @@ export default function LoaderKioskPage() {
               </span>
             </div>
 
-            {/* Middle/Right Tools: Viewport Toggle & User Session */}
+            {/* User Session & Status */}
             <div className="flex items-center gap-3 self-end sm:self-auto text-xs text-slate-400">
-              {/* PC / Tablet Viewport Switch */}
-              <div className="flex items-center bg-[#161E2E] border border-[#2E3A52] p-1 rounded-xl shadow-xs">
-                <button
-                  type="button"
-                  onClick={() => setViewportMode('responsive')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    viewportMode === 'responsive'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Expand to Full PC Desktop Layout"
-                >
-                  <Monitor className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">PC Desktop</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewportMode('tablet')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    viewportMode === 'tablet'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Constrain to 768px Tablet Frame"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span className="hidden md:inline">Tablet Kiosk</span>
-                </button>
-              </div>
 
               <div className="hidden lg:flex items-center gap-2">
                 <span>Peliyagoda Central DC</span>
@@ -250,12 +218,8 @@ export default function LoaderKioskPage() {
         </div>
       </header>
 
-      {/* Main Viewport Container: Full Desktop Layout on PC, Frame on Tablet */}
-      <main
-        className={`flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-between ${
-          viewportMode === 'tablet' ? 'max-w-[768px]' : 'max-w-7xl'
-        }`}
-      >
+      {/* Main Viewport Container: Full Responsive Layout */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-between">
         <div className="w-full">
           {/* SCREEN 1: OUTBOUND DOCK MASTER */}
           {screen === 'dock-master' && (
@@ -840,7 +804,7 @@ export default function LoaderKioskPage() {
                     onClick={() => setScreen('shortfall-exception')}
                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl text-sm shadow-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
-                    <span>Scan Next Crate (Trigger Operational Exception)</span>
+                    <span>Scan Next Crate (CR-076-019)</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

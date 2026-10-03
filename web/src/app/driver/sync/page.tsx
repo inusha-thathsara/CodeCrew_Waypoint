@@ -236,8 +236,8 @@ export default function OfflineSyncPage() {
                 <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 space-y-2">
                   <ShieldCheck className="w-8 h-8 text-slate-400 mx-auto" />
                   <p className="font-bold text-slate-700">All delivery records are synchronized</p>
-                  <p className="text-[11px] max-w-sm mx-auto">
-                    Switch the driver to &ldquo;Simulate Connection Loss&rdquo; on any stop to test offline delivery recording.
+                  <p className="text-[11px] max-w-sm mx-auto text-slate-500">
+                    Deliveries completed during network dropouts or rural coverage gaps are automatically buffered in local storage and reconciled here.
                   </p>
                 </div>
               ) : (

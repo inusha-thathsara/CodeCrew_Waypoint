@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
@@ -26,8 +26,6 @@ import {
   Settings as SettingsIcon,
   HelpCircle,
   Bell,
-  Smartphone,
-  Monitor,
   Database,
   ThermometerSnowflake,
   ArrowRight,
@@ -138,19 +136,24 @@ export default function DriverResponsiveApp() {
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [activeStopIdx, setActiveStopIdx] = useState(1);
-  const [viewportMode, setViewportMode] = useState<'responsive' | 'phone'>('responsive');
 
   const activeStop = DRIVER_STOPS_MAP[activeStopIdx] || DRIVER_STOPS_MAP[1];
 
-  const handleSimulateConnectionLoss = () => {
-    setIsOffline(true);
-    setScreen('offline-mode');
-  };
+  // Auto-detect network connectivity (PWA production standard)
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
 
-  const handleSimulateReconnect = () => {
-    setIsOffline(false);
-    setScreen('sync-status');
-  };
+    if (typeof window !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, []);
 
   const handleConfirmDelivery = async () => {
     if (!signatureData) {
@@ -250,60 +253,21 @@ export default function DriverResponsiveApp() {
             </button>
           </div>
 
-          {/* Right Tools: Viewport Toggle, Online/Offline Simulator & Logout */}
+          {/* Right Tools: Connection Status & Logout */}
           <div className="flex items-center gap-2.5">
-            {/* Desktop / Phone Preview Toggle */}
-            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setViewportMode('responsive')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
-                  viewportMode === 'responsive'
-                    ? 'bg-white text-blue-600 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-                title="Full Responsive Desktop View"
-              >
-                <Monitor className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Web Responsive</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewportMode('phone')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
-                  viewportMode === 'phone'
-                    ? 'bg-white text-blue-600 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-                title="Simulate Mobile Viewport"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Phone Frame</span>
-              </button>
-            </div>
-
-            {/* Network Simulator Pill */}
+            {/* Live Network Status Indicator */}
             {isOffline ? (
-              <button
-                type="button"
-                onClick={handleSimulateReconnect}
-                className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-rose-100 transition-all"
-              >
+              <div className="px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <WifiOff className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Offline Mode</span>
-                <span className="underline ml-1">Reconnect</span>
-              </button>
+                <span>Offline Buffer</span>
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleSimulateConnectionLoss}
-                className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-emerald-100 transition-all"
-              >
+              <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <Wifi className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">4G Cellular</span>
-                <span className="text-slate-400 font-normal hidden sm:inline">•</span>
-                <span className="text-xs text-rose-600 font-semibold underline">Simulate Drop</span>
-              </button>
+                <span>4G LTE Active</span>
+              </div>
             )}
 
             <button
@@ -317,15 +281,9 @@ export default function DriverResponsiveApp() {
         </div>
       </nav>
 
-      {/* Main Container - Wraps in phone frame ONLY when Phone mode is toggled, otherwise 100% full responsive web! */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-center">
-        <div
-          className={`w-full transition-all duration-300 ${
-            viewportMode === 'phone'
-              ? 'max-w-[420px] bg-white rounded-[38px] shadow-2xl border-8 border-slate-900 p-4 sm:p-5 overflow-hidden'
-              : 'max-w-6xl'
-          }`}
-        >
+      {/* Main Responsive Body Container */}
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full">
           {/* ========================================================= */}
           {/* SCREEN 1: GOOD MORNING, KASUN (Home Screen) */}
           {/* ========================================================= */}
@@ -722,14 +680,10 @@ export default function DriverResponsiveApp() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSimulateConnectionLoss}
-                  className="px-3.5 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-rose-100 transition-all shadow-xs"
-                >
-                  <span>📶</span>
-                  <span>Simulate Drop</span>
-                </button>
+                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span>Stop Active</span>
+                </span>
               </div>
 
               {/* 2-Column Responsive Layout on Desktop */}
@@ -895,14 +849,10 @@ export default function DriverResponsiveApp() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSimulateConnectionLoss}
-                  className="px-3.5 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs"
-                >
-                  <span>📶</span>
-                  <span>Simulate Drop</span>
-                </button>
+                <span className="px-3 py-1 bg-amber-50 border border-amber-300 text-amber-700 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>En Route</span>
+                </span>
               </div>
 
               {/* Trip Information Card */}
@@ -988,11 +938,14 @@ export default function DriverResponsiveApp() {
 
                 <button
                   type="button"
-                  onClick={handleSimulateReconnect}
-                  className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 transition-all"
+                  onClick={() => {
+                    setIsOffline(false);
+                    setScreen('sync-status');
+                  }}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                 >
-                  <span>🔄</span>
-                  <span>Simulate Reconnect (4G Active)</span>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Check &amp; Sync Connection</span>
                 </button>
               </div>
 

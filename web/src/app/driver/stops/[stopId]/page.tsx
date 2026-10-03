@@ -205,14 +205,16 @@ export default function StopDetailPage({
 
           <div className="flex items-center gap-3">
             {isOffline ? (
-              <span className="px-3 py-1.5 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+              <span className="px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <WifiOff className="w-3.5 h-3.5" />
-                <span>Simulated Offline</span>
+                <span>Offline Buffer Active</span>
               </span>
             ) : (
               <span className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <Wifi className="w-3.5 h-3.5" />
-                <span>4G Cellular Active</span>
+                <span>4G LTE Active</span>
               </span>
             )}
 
