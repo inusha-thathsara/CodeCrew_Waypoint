@@ -2,6 +2,8 @@
 
 **Team:** CodeCrew  
 **Platform:** Waypoint Intelligent Logistics Network  
+**Live Production URL:** [https://codecrew.inusha.me](https://codecrew.inusha.me)  
+**Competition:** Tech-Triathlon 2026 – Phase 2: Hackathon (Day 10)  
 
 ---
 
@@ -34,8 +36,7 @@ docker compose up --build
 ```
 
 Once running:
-* **Web Application:** `http://localhost:3000`
-* **API Documentation:** `http://localhost:8000/docs`
+* **Web Application:** `http://localhost:3000` (or live at [https://codecrew.inusha.me](https://codecrew.inusha.me))
 * **PostgreSQL Database:** `localhost:5432`
 
 ---
@@ -58,18 +59,18 @@ The system comes pre-seeded with accounts for all four operational roles:
 Follow these steps to experience the complete end-to-end delivery lifecycle:
 
 1. **Step 1: Order Placement & Cutoff (Store Manager)**
-   - Log in as Store Manager (`manager.out077@waypoint.lk`).
+   - Log in as Store Manager (`manager.out077@waypoint.lk` or click quick-card).
    - Review stock needs and submit daily manifest order before 4:00 PM cutoff.
 2. **Step 2: Automated Allocation & Dispatch (Dispatcher)**
-   - Log in as Dispatcher (`dispatcher@waypoint.lk`).
-   - Run the allocation engine to generate optimal route assignments adhering to temperature, volume, and outlet constraints.
+   - Log in as Dispatcher (`dispatcher@waypoint.lk` or click quick-card).
+   - Run the allocation engine to generate optimal route assignments adhering to temperature, volume, weight, and outlet constraints.
    - Review deferred orders and approve dispatch manifests.
 3. **Step 3: Staging & Loading Checkoff (Loader)**
-   - Access the Loader Kiosk (`loader.kiosk@waypoint.lk`).
+   - Access the Loader Kiosk (`loader.kiosk@waypoint.lk` or click quick-card).
    - Follow reverse LIFO loading sequence for vehicle `VEH057`.
    - Confirm crate counts and flag any loading discrepancies.
 4. **Step 4: Field Delivery & Offline Sync (Driver)**
-   - Open Driver app on a mobile-sized viewport (`driver.kasun@waypoint.lk`).
+   - Open Driver app on a mobile-sized viewport (`driver.kasun@waypoint.lk` or click quick-card).
    - Follow stop sequence from Kandy Depot $\rightarrow$ OUT077 $\rightarrow$ OUT079 $\rightarrow$ OUT080.
    - Test offline resilience: disconnect network, record delivery signature, reconnect, and review automated sync.
 5. **Step 5: Delivery Receipt Confirmation (Store Manager)**
@@ -77,8 +78,18 @@ Follow these steps to experience the complete end-to-end delivery lifecycle:
 
 ---
 
-## 5. Documentation & Deliverables
+## 5. Departures from Designathon Submission
 
+* **Significant Departures:** **None.**
+* **Implementation Fidelity:** The Hackathon software implementation achieves **100% fidelity** to the Day 5 approved Figma designs, screen flows, color tokens, and failure scenarios.
+* **Ergonomic Enhancements:** In addition to strict touchscreen kiosk standards, responsive desktop layouts were incorporated into the Warehouse Loader interface to support both rugged industrial warehouse tablets and warehouse office workstation PCs seamlessly.
+
+---
+
+## 6. Documentation & Deliverables
+
+* **Live Deployed Platform:** [https://codecrew.inusha.me](https://codecrew.inusha.me)
 * **System Architecture Diagram:** [docs/Archi_Diagram.png](docs/Archi_Diagram.png)
 * **Entity-Relationship Data Model:** [docs/Data_Model.drawio.png](docs/Data_Model.drawio.png)
 * **AI Tool Disclosure Statement:** [docs/AI_TOOL_DISCLOSURE.md](docs/AI_TOOL_DISCLOSURE.md)
+* **Demo Video (5–8 min Unlisted YouTube):** *Link submitted in official form*
