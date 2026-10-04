@@ -924,6 +924,342 @@ export default function DriverResponsiveApp() {
           )}
 
           {/* ========================================================= */}
+          {/* SCREEN 5: COMPLETE DELIVERY & DIGITAL POD */}
+          {/* ========================================================= */}
+          {screen === 'complete-delivery' && (
+            <div className="max-w-3xl mx-auto space-y-4">
+              {/* Stop Workflow Stepper Bar */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-extrabold text-[11px] border border-blue-200">
+                      Stop {activeStop.num} of 3
+                    </span>
+                    <strong className="text-slate-900 text-sm">
+                      {activeStop.name} ({activeStop.outletId})
+                    </strong>
+                  </div>
+                  <span className="text-slate-500 font-semibold">
+                    Phase 3 of 3: Proof of Delivery (POD)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreen('stop-detail')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>1. Manifest Review</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('en-route')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>2. En Route</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreen('complete-delivery')}
+                    className="py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-blue-600 text-white shadow-xs cursor-pointer"
+                  >
+                    <span>3. Digital POD</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stop Title Card */}
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setScreen('en-route')}
+                    className="p-2 rounded-xl hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer"
+                    title="Back to En Route"
+                  >
+                    <ArrowLeft className="w-5 h-5 text-slate-800" />
+                  </button>
+                  <div>
+                    <h1 className="text-lg font-black text-slate-900">
+                      {activeStop.outletId} : {activeStop.name}
+                    </h1>
+                    <span className="text-xs text-slate-500 font-semibold">
+                      Proof of Delivery (POD) • {activeStop.location}
+                    </span>
+                  </div>
+                </div>
+
+                <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span>At Store Dock</span>
+                </span>
+              </div>
+
+              {/* Offline Warning Banner if disconnected */}
+              {isOffline && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-xs text-amber-800">
+                  <WifiOff className="w-5 h-5 text-amber-600 shrink-0" />
+                  <div>
+                    <strong className="block font-bold">Offline Resilience Active</strong>
+                    <span className="text-amber-700">
+                      Mountain dead zone detected. Digital signature &amp; delivery confirmation will be safely saved in local IndexedDB and synced upon reconnection.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Responsive 2-Column Grid on Desktop, 1-Column on Mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                {/* Left Column: Delivery & Manifest Summary */}
+                <div className="space-y-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2.5 text-xs shadow-xs">
+                    <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+                      RECEIVING STORE DETAILS
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Store Manager</span>
+                      <strong className="text-slate-900">{activeStop.manager}</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Order ID</span>
+                      <strong className="text-slate-900 font-mono">{activeStop.orderId}</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Assigned Vehicle</span>
+                      <strong className="text-slate-900">{activeStop.vehicle}</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5 border-b border-slate-100">
+                      <span className="text-slate-500">Delivery Window</span>
+                      <strong className="text-emerald-700 font-bold">{activeStop.window} (On Time)</strong>
+                    </div>
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-slate-500">Crates Handed Over</span>
+                      <strong className="text-blue-600 font-extrabold text-sm">
+                        {activeStop.totalCrates} Crates Total
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Discrepancy Note or Shortfall Alert */}
+                  {activeStop.shortfallAlert && (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-1">
+                      <div className="font-bold text-amber-900 flex items-center gap-1.5">
+                        <AlertTriangle className="w-4 h-4 text-amber-600" />
+                        <span>Pre-Applied Loading Discrepancy</span>
+                      </div>
+                      <p className="text-amber-800 leading-relaxed pl-5">
+                        {activeStop.shortfallAlert.note}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Optional Driver Discrepancy Input */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-xs shadow-xs">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Dock Discrepancy or Receiving Note (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={deliveryNotes}
+                      onChange={(e) => setDeliveryNotes(e.target.value)}
+                      placeholder="e.g. Received all crates in sound condition, 0 damages..."
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column: Digital Signature & Confirmation */}
+                <div className="space-y-4">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                        DIGITAL PROOF OF DELIVERY
+                      </span>
+                      <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                        Stylus or Touch
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600">
+                      Store Manager <strong className="text-slate-900">{activeStop.manager}</strong> must sign below to confirm handover of goods:
+                    </p>
+
+                    <SignaturePad
+                      onSave={(dataUrl) => setSignatureData(dataUrl)}
+                      onClear={() => setSignatureData(null)}
+                    />
+
+                    {signatureData ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Digital Signature Captured &amp; Encoded</span>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-medium flex items-center gap-2">
+                        <PenTool className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>Please draw signature above to unlock confirmation</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleConfirmDelivery}
+                      disabled={!signatureData}
+                      className={`w-full py-3.5 px-4 font-extrabold rounded-xl text-xs sm:text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        isOffline
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                      } disabled:opacity-40 disabled:cursor-not-allowed`}
+                    >
+                      {isOffline ? (
+                        <>
+                          <WifiOff className="w-4 h-4" />
+                          <span>Save Delivery to Offline Queue (IndexedDB)</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Confirm Delivery &amp; Complete Stop</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Navigation Buttons */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setScreen('en-route')}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Back to En Route Transit</span>
+                </button>
+
+                <div className="text-xs text-slate-500 font-semibold hidden sm:block">
+                  Stop {activeStop.num} of 3 • Step 3: Digital POD
+                </div>
+
+                <div className="text-xs text-slate-400 font-medium italic">
+                  Digital POD required before stop clearance
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* SCREEN 6: DELIVERY SUCCESS */}
+          {/* ========================================================= */}
+          {screen === 'delivery-success' && (
+            <div className="max-w-2xl mx-auto py-8 space-y-6">
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-lg">
+                <div className="w-16 h-16 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center mx-auto text-emerald-600 shadow-sm animate-bounce">
+                  <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-wider font-extrabold px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full inline-block">
+                    Stop {activeStop.num} Completed Successfully
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
+                    Delivery Confirmed!
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                    Proof of delivery and digital handover for <strong className="text-slate-800">{activeStop.outletId} ({activeStop.name})</strong> has been recorded.
+                  </p>
+                </div>
+
+                {/* Receipt Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2 text-left max-w-md mx-auto">
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500">Order ID:</span>
+                    <strong className="text-slate-900 font-mono">{activeStop.orderId}</strong>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500">Received By:</span>
+                    <strong className="text-slate-900">{activeStop.manager}</strong>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500">Crates Handed Over:</span>
+                    <strong className="text-emerald-700 font-bold">{activeStop.totalCrates} Crates (Verified)</strong>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500">Sync Status:</span>
+                    <strong className={isOffline ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>
+                      {isOffline ? 'Saved to Offline Queue (Dexie.js)' : 'Synced to Cloud (Live)'}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-500">Timestamp:</span>
+                    <strong className="text-slate-900 font-mono">
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (Punctual)
+                    </strong>
+                  </div>
+
+                  {signatureData && (
+                    <div className="pt-2 border-t border-slate-200">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                        Captured Signature:
+                      </span>
+                      <div className="h-16 bg-white border border-slate-200 rounded-xl overflow-hidden flex items-center justify-center p-1">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={signatureData} alt="Store Manager Signature" className="max-h-full object-contain" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+                  {activeStopIdx < 3 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextIdx = activeStopIdx + 1;
+                        setActiveStopIdx(nextIdx);
+                        setSignatureData(null);
+                        setDeliveryNotes('');
+                        setScreen('stop-detail');
+                      }}
+                      className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Proceed to Next Stop (Stop {activeStopIdx + 1})</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('route');
+                        setScreen('home');
+                      }}
+                      className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>All 3 Stops Completed! Return to Depot</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('stops');
+                      setScreen('stops-list');
+                    }}
+                    className="w-full sm:w-auto px-5 py-3.5 border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 font-bold rounded-xl text-xs transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>View All Stops</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
           {/* SCREEN 7: OFFLINE MODE (No Internet Connection) */}
           {/* ========================================================= */}
           {screen === 'offline-mode' && (
