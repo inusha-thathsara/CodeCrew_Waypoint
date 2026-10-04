@@ -27,7 +27,6 @@ The table below outlines every AI tool, model version, operational scope, and re
 | :--- | :--- | :--- | :--- |
 | **Google Antigravity IDE**<br>*(Google Gemini Models)* | Google DeepMind | • Interactive coding assistant for Next.js App Router boilerplate.<br>• Automated conversion of raw dataset CSVs into structured PostgreSQL `INSERT` statements (`db/init.sql`).<br>• Scaffolding TypeScript type definitions and Prisma database queries.<br>• Autonomous headless browser UI verification and visual regression checks.<br>• Syntax auditing and optimization for constraint loops in the allocation solver (`web/src/lib/allocation.ts`). | Local IDE & Agentic Environment |
 | **Native Figma AI (Beta)** | Figma | • In-canvas layout scaffolding during Phase 1 Designathon.<br>• Auto-layout micro-adjustments and sample form placeholder text generation. | Figma Desktop Application |
-| **Figma Scripter JS Generator** | Google Gemini | • Scripting automated frame generators for rapid screen translation. | Figma Plugin Engine |
 
 ---
 
