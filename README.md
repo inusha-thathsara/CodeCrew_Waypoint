@@ -77,6 +77,8 @@ Follow these steps to experience the complete end-to-end delivery lifecycle:
 
 ---
 
-## 5. Documentation
+## 5. Documentation & Deliverables
 
-* **Architecture Diagram:** [docs/architecture.md](docs/architecture.md)
+* **System Architecture Diagram:** [docs/Archi_Diagram.png](docs/Archi_Diagram.png)
+* **Entity-Relationship Data Model:** [docs/Data_Model.drawio.png](docs/Data_Model.drawio.png)
+* **AI Tool Disclosure Statement:** [docs/AI_TOOL_DISCLOSURE.md](docs/AI_TOOL_DISCLOSURE.md)
