@@ -18,17 +18,72 @@ export async function POST(
     const now = new Date();
 
     try {
-      // Update stop
-      const updatedStop = await db.tripStop.update({
-        where: { id: Number(stopId) },
-        data: {
-          status: deliveryStatus,
-          discrepancy_note: discrepancyNote || null,
-          signature_data: signatureData || null,
-          is_offline_record: Boolean(isOfflineRecord),
-          completed_at: now,
-        },
-      });
+      // Find the stop flexibly by ID, outlet_id, or sequence
+      let targetStop = null;
+      if (!isNaN(Number(stopId))) {
+        targetStop = await db.tripStop.findFirst({
+          where: {
+            OR: [
+              { id: Number(stopId), trip_id: tripId },
+              { stop_sequence: Number(stopId), trip_id: tripId },
+            ],
+          },
+        });
+      }
+      if (!targetStop) {
+        targetStop = await db.tripStop.findFirst({
+          where: {
+            trip_id: tripId,
+            outlet_id: String(stopId),
+          },
+        });
+      }
+
+      let updatedStop: any = null;
+      if (targetStop) {
+        updatedStop = await db.tripStop.update({
+          where: { id: targetStop.id },
+          data: {
+            status: deliveryStatus,
+            discrepancy_note: discrepancyNote || targetStop.discrepancy_note,
+            signature_data: signatureData || targetStop.signature_data,
+            is_offline_record: Boolean(isOfflineRecord),
+            completed_at: now,
+          },
+        });
+
+        // Also update matching order status to DELIVERED
+        if (targetStop.outlet_id) {
+          await db.order.updateMany({
+            where: { outlet_id: targetStop.outlet_id },
+            data: { status: 'DELIVERED' },
+          }).catch(() => {});
+        }
+      } else {
+        // Fallback update if stop wasn't found by specific match
+        try {
+          updatedStop = await db.tripStop.update({
+            where: { id: Number(stopId) },
+            data: {
+              status: deliveryStatus,
+              discrepancy_note: discrepancyNote || null,
+              signature_data: signatureData || null,
+              is_offline_record: Boolean(isOfflineRecord),
+              completed_at: now,
+            },
+          });
+        } catch {
+          updatedStop = {
+            id: Number(stopId) || 1,
+            trip_id: tripId,
+            status: deliveryStatus,
+            discrepancy_note: discrepancyNote || null,
+            signature_data: signatureData || null,
+            is_offline_record: Boolean(isOfflineRecord),
+            completed_at: now,
+          };
+        }
+      }
 
       // Update parent trip sync telemetry
       await db.trip.update({

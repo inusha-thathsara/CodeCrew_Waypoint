@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
@@ -204,7 +204,51 @@ export default function StoreManagerPage() {
     });
   };
 
-  const handlePlaceOrderSubmit = () => {
+  // Synchronize orders and live delivery telemetry from backend
+  const fetchStoreData = async () => {
+    try {
+      const tripsRes = await fetch('/api/trips?date=2026-09-28').then((r) => r.json()).catch(() => null);
+
+      if (tripsRes?.trips?.length > 0) {
+        const matchedTrip = tripsRes.trips.find((t: any) =>
+          t.stops?.some((s: any) => s.outlet_id === currentStore.id)
+        );
+        if (matchedTrip) {
+          const matchedStop = matchedTrip.stops.find((s: any) => s.outlet_id === currentStore.id);
+          const isDelivered = matchedStop?.status === 'DELIVERED';
+
+          setOrders((prev) =>
+            prev.map((ord) => {
+              if (ord.id === 'WF-1043') {
+                return {
+                  ...ord,
+                  status: isDelivered ? 'Delivered' : matchedTrip.status === 'COMPLETED' ? 'Delivered' : 'On the way',
+                  eta: isDelivered
+                    ? matchedStop?.completed_at
+                      ? `Delivered at ${new Date(matchedStop.completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Completed 7:28 AM'
+                    : '7:12 AM',
+                  driver: `${matchedTrip.driver_name} (077-492104)`,
+                  vehicle: `${matchedTrip.vehicle_id} (Reefer Van 1.5T)`,
+                };
+              }
+              return ord;
+            })
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('Store manager backend sync check failed:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStoreData();
+    const interval = setInterval(fetchStoreData, 8000);
+    return () => clearInterval(interval);
+  }, [currentStore.id]);
+
+  const handlePlaceOrderSubmit = async () => {
     const totalCrates = draftItems.reduce((acc, curr) => acc + curr.quantity, 0);
     const newOrderId = `WF-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -230,6 +274,31 @@ export default function StoreManagerPage() {
     setSelectedOrder(newOrder);
     celebrateSuccess();
     setViewState('order-submitted');
+
+    // Persist to backend API
+    try {
+      const brandClean = currentStore.brand.includes('Fresh') ? 'Fresh' : currentStore.brand.includes('Style') ? 'Style' : 'Tech';
+      const weightEst = Math.max(50, Math.round(totalCrates * 17.5));
+      const volEst = Math.max(0.3, Math.round(totalCrates * 0.08 * 10) / 10);
+      const isChilled = draftItems.some((i) => i.category === 'Chilled' && i.quantity > 0);
+
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          outlet_id: currentStore.id,
+          delivery_date: requestedDeliveryDate,
+          brand: brandClean,
+          weight_kg: weightEst,
+          volume_m3: volEst,
+          crate_count: totalCrates,
+          requires_chilled: isChilled,
+          enforceCutoff: false,
+        }),
+      });
+    } catch (apiErr) {
+      console.warn('Order submission API persist error:', apiErr);
+    }
   };
 
   const handleConfirmDeliveryReceipt = (orderId: string) => {

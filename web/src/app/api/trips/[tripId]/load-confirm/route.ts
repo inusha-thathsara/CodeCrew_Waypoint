@@ -21,6 +21,13 @@ export async function POST(
         },
       });
 
+      if (discrepancyNote) {
+        await db.tripStop.updateMany({
+          where: { trip_id: tripId, stop_sequence: 1 },
+          data: { discrepancy_note: discrepancyNote },
+        }).catch(() => {});
+      }
+
       return NextResponse.json({
         success: true,
         message: isComplete ? 'Vehicle loading verified and marked ON_ROUTE' : 'Loading progress saved',

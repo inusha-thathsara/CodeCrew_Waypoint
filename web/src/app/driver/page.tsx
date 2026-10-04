@@ -161,18 +161,47 @@ export default function DriverResponsiveApp() {
       return;
     }
 
+    const currentOutlet = activeStopIdx === 1 ? 'OUT077' : activeStopIdx === 2 ? 'OUT079' : 'OUT080';
+
     if (isOffline) {
       await offlineDb.offlineActions.add({
         actionId: `OFFLINE-${Date.now()}`,
         tripId: 'TRIP-WF-1043',
         stopId: activeStopIdx,
-        outletId: activeStopIdx === 1 ? 'OUT077' : activeStopIdx === 2 ? 'OUT079' : 'OUT080',
+        outletId: currentOutlet,
         status: 'DELIVERED',
         discrepancyNote: 'Milk short by 3 units (loading issue recorded)',
         signatureData,
         offlineTimestamp: new Date().toISOString(),
         synced: false,
       });
+    } else {
+      try {
+        await fetch('/api/trips/TRIP-WF-1043/deliver', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stopId: currentOutlet,
+            status: 'DELIVERED',
+            discrepancyNote: 'Milk short by 3 units (loading issue recorded)',
+            signatureData,
+            isOfflineRecord: false,
+          }),
+        });
+      } catch (err) {
+        console.warn('Online delivery call failed, buffering to local offline store:', err);
+        await offlineDb.offlineActions.add({
+          actionId: `OFFLINE-${Date.now()}`,
+          tripId: 'TRIP-WF-1043',
+          stopId: activeStopIdx,
+          outletId: currentOutlet,
+          status: 'DELIVERED',
+          discrepancyNote: 'Milk short by 3 units (loading issue recorded)',
+          signatureData,
+          offlineTimestamp: new Date().toISOString(),
+          synced: false,
+        });
+      }
     }
 
     confetti({
@@ -183,6 +212,40 @@ export default function DriverResponsiveApp() {
     });
 
     setScreen('delivery-success');
+  };
+
+  const handleSyncOfflineQueue = async () => {
+    try {
+      const unsynced = await offlineDb.offlineActions.filter((a) => !a.synced).toArray();
+      if (unsynced.length > 0) {
+        await fetch('/api/trips/TRIP-WF-1043/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actions: unsynced.map((a) => ({
+              actionId: a.actionId,
+              type: 'DELIVER_STOP',
+              stopId: a.stopId,
+              outletId: a.outletId,
+              status: a.status,
+              discrepancyNote: a.discrepancyNote,
+              signatureData: a.signatureData,
+              offlineTimestamp: a.offlineTimestamp,
+            })),
+          }),
+        });
+
+        for (const item of unsynced) {
+          if (item.id) {
+            await offlineDb.offlineActions.update(item.id, { synced: true });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Sync failed:', err);
+    }
+    setIsOffline(false);
+    setScreen('sync-status');
   };
 
   const handleLogout = () => {
@@ -1274,10 +1337,7 @@ export default function DriverResponsiveApp() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsOffline(false);
-                    setScreen('sync-status');
-                  }}
+                  onClick={handleSyncOfflineQueue}
                   className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />

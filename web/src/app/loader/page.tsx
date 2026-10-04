@@ -78,13 +78,30 @@ export default function LoaderKioskPage() {
     router.push('/');
   };
 
-  const celebrateAndProceed = (nextScreen: LoaderScreen) => {
+  const celebrateAndProceed = async (nextScreen: LoaderScreen) => {
     confetti({
       particleCount: 70,
       spread: 60,
       origin: { y: 0.6 },
       colors: ['#2563EB', '#10B981', '#38BDF8', '#F59E0B'],
     });
+
+    if (screen === 'gate-pass' || nextScreen === 'dock-master') {
+      try {
+        await fetch('/api/trips/TRIP-WF-1043/load-confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bayNumber: 'Bay 04',
+            discrepancyNote: shortfallReason ? `Milk short by ${shortfallQty} units: ${shortfallReason}` : null,
+            isComplete: true,
+          }),
+        });
+      } catch (e) {
+        console.warn('Load confirm API dispatch failed:', e);
+      }
+    }
+
     setScreen(nextScreen);
   };
 
@@ -1356,8 +1373,19 @@ export default function LoaderKioskPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setShortfallModalOpen(false);
+                  try {
+                    await fetch('/api/trips/TRIP-WF-1043/load-confirm', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        bayNumber: 'Bay 04',
+                        discrepancyNote: `Milk short by ${shortfallQty} units (${shortfallReason})`,
+                        isComplete: false,
+                      }),
+                    });
+                  } catch (e) {}
                   celebrateAndProceed('shortfall-exception');
                 }}
                 className="w-2/3 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg cursor-pointer"

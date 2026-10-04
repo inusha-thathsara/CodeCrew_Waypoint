@@ -37,9 +37,24 @@ export async function POST(
       try {
         let existingStop: any = null;
         try {
-          existingStop = await db.tripStop.findUnique({
-            where: { id: Number(action.stopId) },
-          });
+          if (!isNaN(Number(action.stopId))) {
+            existingStop = await db.tripStop.findFirst({
+              where: {
+                OR: [
+                  { id: Number(action.stopId), trip_id: tripId },
+                  { stop_sequence: Number(action.stopId), trip_id: tripId },
+                ],
+              },
+            });
+          }
+          if (!existingStop && action.outletId) {
+            existingStop = await db.tripStop.findFirst({
+              where: {
+                trip_id: tripId,
+                outlet_id: action.outletId,
+              },
+            });
+          }
         } catch {
           // db offline fallback
         }
@@ -55,8 +70,9 @@ export async function POST(
         }
 
         try {
+          const updateId = existingStop ? existingStop.id : Number(action.stopId);
           const updated = await db.tripStop.update({
-            where: { id: Number(action.stopId) },
+            where: { id: updateId },
             data: {
               status: action.status || 'DELIVERED',
               discrepancy_note: action.discrepancyNote || existingStop?.discrepancy_note,
@@ -66,6 +82,15 @@ export async function POST(
             },
           });
           syncResults.push(updated);
+
+          // Update matching order
+          const outletId = existingStop?.outlet_id || action.outletId;
+          if (outletId) {
+            await db.order.updateMany({
+              where: { outlet_id: outletId },
+              data: { status: 'DELIVERED' },
+            }).catch(() => {});
+          }
         } catch {
           syncResults.push({
             id: action.stopId,

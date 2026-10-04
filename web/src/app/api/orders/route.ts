@@ -93,15 +93,36 @@ const SEED_ORDERS = [
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const dateParam = searchParams.get('date') || '2026-09-28';
+    const dateParam = searchParams.get('date');
     const statusParam = searchParams.get('status');
     const brandParam = searchParams.get('brand');
     const outletParam = searchParams.get('outlet_id');
 
     try {
-      const whereClause: any = {
-        delivery_date: new Date(dateParam),
-      };
+      const whereClause: any = {};
+
+      if (dateParam && dateParam !== 'all') {
+        const d = new Date(dateParam);
+        const startOfDay = new Date(d);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(d);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereClause.delivery_date = {
+          gte: startOfDay,
+          lte: endOfDay,
+        };
+      } else if (!outletParam) {
+        // Default to simulated date if neither date nor outlet was specified
+        const d = new Date('2026-09-28');
+        const startOfDay = new Date(d);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(d);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereClause.delivery_date = {
+          gte: startOfDay,
+          lte: endOfDay,
+        };
+      }
 
       if (statusParam) whereClause.status = statusParam;
       if (brandParam) whereClause.brand = brandParam;

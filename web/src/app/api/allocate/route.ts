@@ -14,6 +14,94 @@ const FALLBACK_VEHICLES: VehicleInput[] = [
   { vehicle_id: 'VEH037', type: 'van', temp: 'ambient', weight_cap_kg: 1100, volume_cap_m3: 8.0, fuel_type: 'diesel', km_per_l: 11.5, weekly_fuel_quota_l: 340, depot: 'Peliyagoda' },
 ];
 
+// Fallback orders matching challenge scenario
+const FALLBACK_ORDERS: OrderInput[] = [
+  {
+    order_id: 'WF-1043-1',
+    outlet_id: 'OUT077',
+    delivery_date: '2026-09-28',
+    brand: 'Fresh',
+    weight_kg: 320,
+    volume_m3: 1.4,
+    crate_count: 18,
+    requires_chilled: true,
+    status: 'CONFIRMED',
+    outlet: {
+      outlet_id: 'OUT077',
+      brand: 'Fresh',
+      district: 'Kandy',
+      depot: 'Kandy',
+      dock_type: 'street',
+      parking_constraint: 'van_only',
+      window_open_time: '05:00',
+      window_close_time: '07:30',
+    },
+  },
+  {
+    order_id: 'WF-1043-2',
+    outlet_id: 'OUT079',
+    delivery_date: '2026-09-28',
+    brand: 'Fresh',
+    weight_kg: 280,
+    volume_m3: 1.2,
+    crate_count: 15,
+    requires_chilled: true,
+    status: 'CONFIRMED',
+    outlet: {
+      outlet_id: 'OUT079',
+      brand: 'Fresh',
+      district: 'Kandy',
+      depot: 'Kandy',
+      dock_type: 'street',
+      parking_constraint: 'van_only',
+      window_open_time: '04:00',
+      window_close_time: '07:45',
+    },
+  },
+  {
+    order_id: 'WF-1043-3',
+    outlet_id: 'OUT080',
+    delivery_date: '2026-09-28',
+    brand: 'Fresh',
+    weight_kg: 265,
+    volume_m3: 1.1,
+    crate_count: 14,
+    requires_chilled: true,
+    status: 'CONFIRMED',
+    outlet: {
+      outlet_id: 'OUT080',
+      brand: 'Fresh',
+      district: 'Kandy',
+      depot: 'Kandy',
+      dock_type: 'street',
+      parking_constraint: 'van_only',
+      window_open_time: '05:30',
+      window_close_time: '08:00',
+    },
+  },
+  {
+    order_id: 'WF-1044-1',
+    outlet_id: 'OUT084',
+    delivery_date: '2026-09-28',
+    brand: 'Fresh',
+    weight_kg: 450,
+    volume_m3: 1.8,
+    crate_count: 22,
+    requires_chilled: true,
+    status: 'CONFIRMED',
+    outlet: {
+      outlet_id: 'OUT084',
+      brand: 'Fresh',
+      district: 'Kandy',
+      depot: 'Kandy',
+      dock_type: 'rear_dock',
+      parking_constraint: 'normal',
+      window_open_time: '05:30',
+      window_close_time: '08:00',
+    },
+  },
+];
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -24,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error('DB_TIMEOUT')), 600)
+        setTimeout(() => reject(new Error('DB_TIMEOUT')), 3500)
       );
 
       const dbOrders = (await Promise.race([
@@ -58,7 +146,7 @@ export async function POST(req: NextRequest) {
       const dbVehicles = (await Promise.race([
         db.vehicle.findMany(),
         new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error('DB_TIMEOUT')), 400)
+          setTimeout(() => reject(new Error('DB_TIMEOUT')), 3500)
         ),
       ])) as any[];
 
@@ -77,6 +165,10 @@ export async function POST(req: NextRequest) {
       }
     } catch (dbErr) {
       console.warn('DB read failed or timed out during allocation, using mock dataset:', dbErr);
+    }
+
+    if (orders.length === 0) {
+      orders = FALLBACK_ORDERS;
     }
 
     if (vehicles.length === 0) {
@@ -110,6 +202,11 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        // Delete existing stops for this trip to prevent duplicate rows on re-allocation
+        await db.tripStop.deleteMany({
+          where: { trip_id: plannedTrip.trip_id },
+        });
+
         // Insert stops
         for (const stop of plannedTrip.stops) {
           await db.tripStop.create({
@@ -122,6 +219,14 @@ export async function POST(req: NextRequest) {
               status: 'PLANNED',
             },
           });
+
+          // Mark corresponding order as PLANNED
+          if (stop.order_id) {
+            await db.order.updateMany({
+              where: { order_id: stop.order_id },
+              data: { status: 'PLANNED' },
+            }).catch(() => {});
+          }
         }
       }
     } catch (saveErr) {

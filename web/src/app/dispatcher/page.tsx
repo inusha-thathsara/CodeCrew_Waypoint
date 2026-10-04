@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
@@ -78,6 +78,50 @@ export default function DispatcherPage() {
 
   // Screen 3: On-road tracking state
   const [trackingFilter, setTrackingFilter] = useState<'All' | 'In Transit' | 'At Dock' | 'Completed'>('All');
+  const [liveTrips, setLiveTrips] = useState<any[]>([]);
+
+  const fetchDispatcherData = async () => {
+    try {
+      const [ordersRes, tripsRes] = await Promise.all([
+        fetch('/api/orders?date=all').then((r) => r.json()).catch(() => null),
+        fetch('/api/trips?date=2026-09-28').then((r) => r.json()).catch(() => null),
+      ]);
+
+      if (ordersRes?.orders?.length > 0) {
+        const mappedOrders: OrderItem[] = ordersRes.orders.map((o: any) => ({
+          id: o.order_id,
+          brand: (o.brand === 'Fresh' ? 'Waypoint Fresh' : o.brand === 'Style' ? 'Waypoint Style' : 'Waypoint Tech') as any,
+          outletId: o.outlet_id || 'OUT077',
+          outletName: o.outlet ? `${o.outlet.brand} (${o.outlet.district})` : `Outlet ${o.outlet_id}`,
+          district: o.outlet?.district || 'Kandy',
+          deliveryWindow: o.outlet ? `${o.outlet.window_open_time} - ${o.outlet.window_close_time}` : '5:30 AM - 8:00 AM',
+          weightKg: Number(o.weight_kg),
+          volumeM3: Number(o.volume_m3),
+          crates: Number(o.crate_count),
+          temp: o.requires_chilled ? 'Chilled (Reefer)' : 'Ambient',
+          status: o.status === 'PLANNED' ? 'Planned' : o.status === 'CONFIRMED' ? 'Ready for Allocation' : 'Planned',
+        }));
+
+        setOrders((prev) => {
+          const existingIds = new Set(mappedOrders.map((m) => m.id));
+          const unrepresented = prev.filter((p) => !existingIds.has(p.id));
+          return [...mappedOrders, ...unrepresented];
+        });
+      }
+
+      if (tripsRes?.trips?.length > 0) {
+        setLiveTrips(tripsRes.trips);
+      }
+    } catch (err) {
+      console.warn('Dispatcher background fetch error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDispatcherData();
+    const interval = setInterval(fetchDispatcherData, 7000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -98,6 +142,7 @@ export default function DispatcherPage() {
         body: JSON.stringify({ delivery_date: '2026-09-28' }),
       });
       await res.json();
+      await fetchDispatcherData();
       setAllocationDone(true);
       setActiveScreen('allocation-engine');
       confetti({
@@ -934,15 +979,36 @@ export default function DispatcherPage() {
                           <span className="text-[11px] text-slate-500">Live ETA: 7:12 AM</span>
                         </td>
                         <td className="p-3.5">
-                          <div className="w-24 bg-slate-200 rounded-full h-1.5">
-                            <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '33%' }} />
-                          </div>
-                          <span className="text-[10px] text-slate-400 mt-1 block">Stop 1 of 3</span>
+                          {(() => {
+                            const t1043 = liveTrips.find((t) => t.trip_id === 'TRIP-WF-1043');
+                            const stops = t1043?.stops || [];
+                            const deliveredCount = stops.filter((s: any) => s.status === 'DELIVERED').length;
+                            const total = stops.length || 3;
+                            const pct = Math.max(25, Math.round((deliveredCount / total) * 100));
+                            return (
+                              <>
+                                <div className="w-24 bg-slate-200 rounded-full h-1.5">
+                                  <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[10px] text-slate-400 mt-1 block">
+                                  {deliveredCount > 0 ? `${deliveredCount} of ${total} Delivered` : `Stop 1 of ${total}`}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </td>
                         <td className="p-3.5 pr-4 text-right">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            On Route
-                          </span>
+                          {(() => {
+                            const t1043 = liveTrips.find((t) => t.trip_id === 'TRIP-WF-1043');
+                            const allDelivered = t1043?.stops?.length && t1043.stops.every((s: any) => s.status === 'DELIVERED');
+                            const status = allDelivered || t1043?.status === 'COMPLETED' ? 'Completed' : t1043?.status === 'DEGRADED_OFFLINE' ? 'Offline Buffered' : 'On Route';
+                            const badgeClass = status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : status === 'Offline Buffered' ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+                            return (
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass}`}>
+                                {status}
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
 
