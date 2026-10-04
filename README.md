@@ -89,6 +89,7 @@ Follow these steps to experience the complete end-to-end delivery lifecycle:
 ## 6. Documentation & Deliverables
 
 * **Live Deployed Platform:** [https://codecrew.inusha.me](https://codecrew.inusha.me)
+* **Seeded Account Credentials & Guide:** [docs/SEEDED_ACCOUNT_CREDENTIALS.md](docs/SEEDED_ACCOUNT_CREDENTIALS.md)
 * **System Architecture Diagram:** [docs/Archi_Diagram.png](docs/Archi_Diagram.png)
 * **Entity-Relationship Data Model:** [docs/Data_Model.drawio.png](docs/Data_Model.drawio.png)
 * **AI Tool Disclosure Statement:** [docs/AI_TOOL_DISCLOSURE.md](docs/AI_TOOL_DISCLOSURE.md)
