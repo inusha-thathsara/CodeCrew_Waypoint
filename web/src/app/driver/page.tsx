@@ -29,6 +29,7 @@ import {
   Database,
   ThermometerSnowflake,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import SignaturePad from '@/components/SignaturePad';
 import { offlineDb } from '@/lib/offline-store';
@@ -132,10 +133,14 @@ export default function DriverResponsiveApp() {
   const router = useRouter();
   const [screen, setScreen] = useState<DriverScreen>('home');
   const [activeTab, setActiveTab] = useState<'route' | 'stops' | 'settings'>('route');
-  const [isOffline, setIsOffline] = useState(false);
+  const [isOffline, setIsOffline] = useState(() =>
+    typeof window !== 'undefined' ? !navigator.onLine : false
+  );
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [activeStopIdx, setActiveStopIdx] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const activeStop = DRIVER_STOPS_MAP[activeStopIdx] || DRIVER_STOPS_MAP[1];
 
@@ -145,7 +150,6 @@ export default function DriverResponsiveApp() {
     const handleOffline = () => setIsOffline(true);
 
     if (typeof window !== 'undefined') {
-      setIsOffline(!navigator.onLine);
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
       return () => {
@@ -161,11 +165,18 @@ export default function DriverResponsiveApp() {
       return;
     }
 
+    if (isSubmitting) {
+      return;
+    }
+
     const currentOutlet = activeStopIdx === 1 ? 'OUT077' : activeStopIdx === 2 ? 'OUT079' : 'OUT080';
 
-    if (isOffline) {
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    const queueForLater = async () => {
       await offlineDb.offlineActions.add({
-        actionId: `OFFLINE-${Date.now()}`,
+        actionId: `OFFLINE-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         tripId: 'TRIP-WF-1043',
         stopId: activeStopIdx,
         outletId: currentOutlet,
@@ -175,9 +186,20 @@ export default function DriverResponsiveApp() {
         offlineTimestamp: new Date().toISOString(),
         synced: false,
       });
+    };
+
+    if (isOffline) {
+      try {
+        await queueForLater();
+      } catch (err) {
+        console.warn('Failed to buffer delivery locally:', err);
+        setSubmitError('Could not save this delivery to the offline queue. Please retry.');
+        setIsSubmitting(false);
+        return;
+      }
     } else {
       try {
-        await fetch('/api/trips/TRIP-WF-1043/deliver', {
+        const res = await fetch('/api/trips/TRIP-WF-1043/deliver', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -188,19 +210,28 @@ export default function DriverResponsiveApp() {
             isOfflineRecord: false,
           }),
         });
+
+        if (!res.ok) {
+          throw new Error(`Server rejected the delivery (HTTP ${res.status})`);
+        }
+
+        const data = await res.json().catch(() => null);
+        if (!data || data.success !== true) {
+          throw new Error(data?.error || 'Server did not confirm the delivery.');
+        }
       } catch (err) {
         console.warn('Online delivery call failed, buffering to local offline store:', err);
-        await offlineDb.offlineActions.add({
-          actionId: `OFFLINE-${Date.now()}`,
-          tripId: 'TRIP-WF-1043',
-          stopId: activeStopIdx,
-          outletId: currentOutlet,
-          status: 'DELIVERED',
-          discrepancyNote: 'Milk short by 3 units (loading issue recorded)',
-          signatureData,
-          offlineTimestamp: new Date().toISOString(),
-          synced: false,
-        });
+
+        try {
+          await queueForLater();
+        } catch (queueErr) {
+          console.warn('Failed to buffer delivery locally:', queueErr);
+          setSubmitError(
+            'Delivery could not be recorded: the server rejected it and the offline queue is unavailable. Please retry.'
+          );
+          setIsSubmitting(false);
+          return;
+        }
       }
     }
 
@@ -211,6 +242,7 @@ export default function DriverResponsiveApp() {
       colors: ['#2563EB', '#10B981', '#38BDF8'],
     });
 
+    setIsSubmitting(false);
     setScreen('delivery-success');
   };
 
@@ -218,7 +250,7 @@ export default function DriverResponsiveApp() {
     try {
       const unsynced = await offlineDb.offlineActions.filter((a) => !a.synced).toArray();
       if (unsynced.length > 0) {
-        await fetch('/api/trips/TRIP-WF-1043/sync', {
+        const res = await fetch('/api/trips/TRIP-WF-1043/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -235,10 +267,27 @@ export default function DriverResponsiveApp() {
           }),
         });
 
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Sync rejected by server');
+        }
+
+        // Only clear what the server confirmed as synced. Conflicted or failed
+        // actions stay queued so they are not silently lost.
+        const cleared = new Set<string>([
+          ...(data.syncedActionIds ?? []),
+        ]);
         for (const item of unsynced) {
-          if (item.id) {
+          if (item.id && cleared.has(item.actionId)) {
             await offlineDb.offlineActions.update(item.id, { synced: true });
           }
+        }
+
+        if (data.conflicts?.length || data.failed?.length) {
+          setSubmitError(
+            `${data.conflicts?.length ?? 0} conflict(s) and ${data.failed?.length ?? 0} failure(s) kept in the offline queue for review.`
+          );
         }
       }
     } catch (err) {
@@ -1169,14 +1218,19 @@ export default function DriverResponsiveApp() {
                     <button
                       type="button"
                       onClick={handleConfirmDelivery}
-                      disabled={!signatureData}
+                      disabled={!signatureData || isSubmitting}
                       className={`w-full py-3.5 px-4 font-extrabold rounded-xl text-xs sm:text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
                         isOffline
                           ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
                           : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                       } disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
-                      {isOffline ? (
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Recording Delivery...</span>
+                        </>
+                      ) : isOffline ? (
                         <>
                           <WifiOff className="w-4 h-4" />
                           <span>Save Delivery to Offline Queue (IndexedDB)</span>
@@ -1188,6 +1242,16 @@ export default function DriverResponsiveApp() {
                         </>
                       )}
                     </button>
+
+                    {submitError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-[11px] sm:text-xs font-semibold text-red-800"
+                      >
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-px" />
+                        <span className="leading-relaxed">{submitError}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

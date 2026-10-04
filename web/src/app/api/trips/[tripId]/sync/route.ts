@@ -12,6 +12,19 @@ interface OfflineAction {
   offlineTimestamp: string;
 }
 
+interface SyncConflict {
+  actionId: string;
+  stopId: number | string;
+  reason: string;
+  resolution: string;
+}
+
+interface SyncFailure {
+  actionId: string | null;
+  stopId: number | string | null;
+  reason: string;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ tripId: string }> }
@@ -29,8 +42,10 @@ export async function POST(
       });
     }
 
-    const syncResults: any[] = [];
-    const conflicts: any[] = [];
+    const syncResults: { actionId: string; stop: unknown }[] = [];
+    const conflicts: SyncConflict[] = [];
+    const failed: SyncFailure[] = [];
+    const conflictedIds = new Set<string>();
     const now = new Date();
 
     for (const action of actions) {
@@ -67,6 +82,7 @@ export async function POST(
             reason: 'Stop was already marked DELIVERED on server',
             resolution: 'CLIENT_TIMESTAMP_PRESERVED',
           });
+          conflictedIds.add(action.actionId);
         }
 
         try {
@@ -81,23 +97,31 @@ export async function POST(
               completed_at: action.offlineTimestamp ? new Date(action.offlineTimestamp) : now,
             },
           });
-          syncResults.push(updated);
+          syncResults.push({ actionId: action.actionId, stop: updated });
 
-          // Update matching order
+          // Update matching order, scoped to this trip's delivery date.
           const outletId = existingStop?.outlet_id || action.outletId;
           if (outletId) {
+            const parentTrip = await db.trip
+              .findUnique({ where: { trip_id: tripId }, select: { delivery_date: true } })
+              .catch(() => null);
+
+            const orderWhere: Record<string, unknown> = { outlet_id: outletId };
+            if (parentTrip?.delivery_date) {
+              orderWhere.delivery_date = new Date(parentTrip.delivery_date);
+            }
+
             await db.order.updateMany({
-              where: { outlet_id: outletId },
+              where: orderWhere,
               data: { status: 'DELIVERED' },
-            }).catch(() => {});
+            });
           }
-        } catch {
-          syncResults.push({
-            id: action.stopId,
-            trip_id: tripId,
-            status: action.status,
-            is_offline_record: true,
-            completed_at: action.offlineTimestamp || now.toISOString(),
+        } catch (syncErr) {
+          // Not persisted - surface it so the client keeps the action queued.
+          failed.push({
+            actionId: action.actionId,
+            stopId: action.stopId,
+            reason: String((syncErr as Error)?.message ?? syncErr),
           });
         }
       } catch (err: any) {
@@ -126,18 +150,37 @@ export async function POST(
           data: { status: 'COMPLETED' },
         });
       }
-    } catch {
-      // ignore in offline fallback
+    } catch (telemetryErr) {
+      // Telemetry is part of persisting the sync, so surface it rather than
+      // reporting a clean sync that never reached the database.
+      failed.push({
+        actionId: null,
+        stopId: null,
+        reason: `Trip telemetry update failed: ${String((telemetryErr as Error)?.message ?? telemetryErr)}`,
+      });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Successfully synchronized ${syncResults.length} offline delivery events`,
-      syncedCount: syncResults.length,
-      conflicts,
-      tripId,
-      syncedAt: now.toISOString(),
-    });
+    const syncedActionIds = syncResults
+      .filter((r) => !conflictedIds.has(r.actionId))
+      .map((r) => r.actionId);
+    const conflictActionIds = conflicts.map((c) => c.actionId);
+    const allFailed = failed.length > 0 && syncedActionIds.length === 0;
+
+    return NextResponse.json(
+      {
+        success: !allFailed,
+        message: `Synchronized ${syncedActionIds.length} offline delivery event(s)`,
+        syncedCount: syncedActionIds.length,
+        syncedActionIds,
+        // Client must keep these queued for a human decision.
+        conflicts,
+        conflictActionIds,
+        failed,
+        tripId,
+        syncedAt: now.toISOString(),
+      },
+      { status: allFailed ? 500 : 200 }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to sync offline actions' }, { status: 500 });
   }

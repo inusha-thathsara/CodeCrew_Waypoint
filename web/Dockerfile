@@ -1,6 +1,8 @@
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
+# Prisma's query engine links against OpenSSL; Alpine provides openssl3.
+RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
@@ -8,6 +10,7 @@ RUN npm ci
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -19,6 +22,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Required at RUNTIME: the Prisma query engine is loaded by the app, and
+# without OpenSSL every database write throws and the API silently falls back
+# to mock data.
+RUN apk add --no-cache openssl
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

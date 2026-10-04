@@ -73,10 +73,20 @@ export default function OfflineSyncPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        // Only mark the actions the server confirmed. Conflicted/failed ones
+        // stay in the queue instead of being silently discarded.
+        const cleared = new Set<string>(data.syncedActionIds ?? []);
         for (const act of unsynced) {
-          if (act.id) {
+          if (act.id && cleared.has(act.actionId)) {
             await offlineDb.offlineActions.update(act.id, { synced: true });
           }
+        }
+
+        const unresolved = (data.conflicts?.length ?? 0) + (data.failed?.length ?? 0);
+        if (unresolved > 0) {
+          alert(
+            `${data.conflicts?.length ?? 0} conflict(s) and ${data.failed?.length ?? 0} failure(s) were kept in the queue for review.`
+          );
         }
 
         confetti({
