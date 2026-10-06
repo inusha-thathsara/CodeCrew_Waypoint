@@ -52,12 +52,23 @@ export async function POST(
           },
         });
 
-        // Also update matching order status to DELIVERED
+        // Also update matching order status to DELIVERED.
+        // Scoped to this trip's delivery date so a multi-day outlet does not
+        // have every future order marked as delivered.
         if (targetStop.outlet_id) {
+          const parentTrip = await db.trip
+            .findUnique({ where: { trip_id: tripId }, select: { delivery_date: true } })
+            .catch(() => null);
+
+          const orderWhere: Record<string, unknown> = { outlet_id: targetStop.outlet_id };
+          if (parentTrip?.delivery_date) {
+            orderWhere.delivery_date = new Date(parentTrip.delivery_date);
+          }
+
           await db.order.updateMany({
-            where: { outlet_id: targetStop.outlet_id },
+            where: orderWhere,
             data: { status: 'DELIVERED' },
-          }).catch(() => {});
+          });
         }
       } else {
         // Fallback update if stop wasn't found by specific match
@@ -117,19 +128,18 @@ export async function POST(
         allCompleted: remainingStops === 0,
       });
     } catch (dbErr) {
-      return NextResponse.json({
-        success: true,
-        message: 'Delivery recorded successfully',
-        stop: {
-          id: Number(stopId),
-          trip_id: tripId,
-          status: deliveryStatus,
-          discrepancy_note: discrepancyNote || null,
-          signature_data: signatureData ? 'Signature captured' : null,
-          is_offline_record: Boolean(isOfflineRecord),
-          completed_at: now.toISOString(),
+      // The delivery was NOT persisted. Report the failure honestly instead of
+      // fabricating a success payload, which previously made a total DB outage
+      // look like a completed delivery.
+      console.error(`Failed to record delivery for stop ${stopId} on trip ${tripId}:`, dbErr);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to record delivery',
+          detail: String((dbErr as Error)?.message ?? dbErr),
         },
-      });
+        { status: 500 }
+      );
     }
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to record delivery' }, { status: 500 });
